@@ -40,6 +40,31 @@ C = A ⊕ B    (bitwise XOR)
 
 **Use:** Associate concepts, create relationships
 
+> ### ⚠️ THE FOUNDATIONAL LIMITATION: XOR Commutativity and Argument Order
+>
+> **Critical Understanding:** Because XOR is both commutative AND associative, the algebraic result is invariant to the order in which pairs are XORed together:
+>
+> ```
+> (Pos1 ⊕ John) ⊕ (Pos2 ⊕ Mary) = (Pos2 ⊕ Mary) ⊕ (Pos1 ⊕ John)
+> ```
+>
+> **What this means:**
+> - The position vectors `Pos1`, `Pos2`, etc. act as **unique semantic tags**, NOT as strict sequence encoders
+> - The final vector correctly encodes WHICH argument occupies WHICH position
+> - However, the vector itself does not inherently encode the ORDER 1→2→3
+> - Different argument orders with the same atoms at different positions produce mathematically different vectors
+> - But **swapping the same atoms** between positions can create algebraic ambiguity
+>
+> **Mitigation Strategy:**
+> 1. **Similarity-based decoding:** Use topK similarity matching to identify most probable arguments
+> 2. **Semantic role templates:** The Phrasing Engine (DS11) uses role-annotated templates like `{Pos1:Seller}` to impose logical order at presentation time
+> 3. **Domain knowledge:** Operators carry semantic expectations (e.g., `loves(Subject, Object)`) that guide interpretation
+>
+> **Practical Impact:**
+> - Encoding is robust and unambiguous
+> - Decoding relies on semantic context and similarity matching
+> - The Phrasing Engine is the authoritative component for enforcing output order
+
 ### 1.2.2 Bundle (Majority Vote)
 
 ```

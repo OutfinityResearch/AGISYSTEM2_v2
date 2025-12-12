@@ -9,7 +9,7 @@
 
 ## 1. Document Purpose
 
-This User Requirements Specification (URS) defines the high-level user needs and business requirements for AGISystem2 (Spock GOS - Geometric Operating System). Requirements are numbered using the format **URS-XX** for traceability.
+This User Requirements Specification (URS) defines the high-level user needs and business requirements for AGISystem2 (Spock GOS - Holographic Computation Engine). Requirements are numbered using the format **URS-XX** for traceability.
 
 ---
 
@@ -117,6 +117,7 @@ AGISystem2 is a neuro-symbolic reasoning system that provides deterministic, exp
 | **URS-38** | The system SHALL provide example theories for common domains | SHOULD | Accelerate learning |
 | **URS-39** | The system SHALL provide clear error messages with remediation suggestions | MUST | Developer experience |
 | **URS-40** | The system SHALL provide debugging tools for inspecting vectors and KB state | SHOULD | Development support |
+| **URS-41** | The system SHALL support a `SYS2_DEBUG` environment variable to enable detailed trace logging | SHOULD | Facilitates debugging complex scenarios |
 
 ---
 

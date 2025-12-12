@@ -168,6 +168,36 @@ This Non-Functional Specification (NFS) defines the quality attributes, constrai
 | **NFS-59** | Custom theory loaders | Optional | API review | URS-26 |
 | **NFS-60** | Custom phrasing templates | Required | API review | URS-14 |
 
+### 7.4 Code Style and Module System
+
+| ID | Requirement | Target | Verification | Traces To |
+|----|-------------|--------|--------------|-----------|
+| **NFS-92** | ES Modules with .mjs extension | Required | All source files use .mjs | URS-37 |
+| **NFS-93** | Async/await for asynchronous operations | Required | No callback-based async | URS-37 |
+| **NFS-94** | Module documentation files | Required | Each .mjs has matching .mjs.md | URS-37 |
+
+### 7.5 Documentation Convention
+
+Each source module `src/<folder>/<module>.mjs` must have a corresponding specification file `src/<folder>/<module>.mjs.md` containing:
+
+1. **Purpose** - One-line description
+2. **Exports** - List of exported functions/classes
+3. **API Signatures** - Function signatures with types
+4. **Algorithm Pseudocode** - For complex functions
+5. **Dependencies** - Required imports
+6. **Test Cases** - Expected test scenarios
+
+Example structure:
+```
+src/
+├── core/
+│   ├── vector.mjs           # Implementation
+│   ├── vector.mjs.md        # Specification
+│   ├── operations.mjs
+│   ├── operations.mjs.md
+│   └── ...
+```
+
 ---
 
 ## 8. Usability Requirements

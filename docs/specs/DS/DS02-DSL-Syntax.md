@@ -38,6 +38,22 @@ Each argument is bound with its **position vector** (Pos1, Pos2, etc.) before be
 
 > **Important:** We do NOT use permutation (bit rotation) because it breaks vector extension. See Chapter 1.2.3 for details. Position vectors are quasi-orthogonal markers that achieve the same goal safely.
 
+> ### ⚠️ CRITICAL LIMITATION: Commutativity of Bind
+>
+> **The resulting vector is invariant to the order in which position-tagged pairs are XORed:**
+>
+> ```
+> (Pos1 ⊕ A) ⊕ (Pos2 ⊕ B) = (Pos2 ⊕ B) ⊕ (Pos1 ⊕ A)
+> ```
+>
+> **This means:**
+> - Position vectors (`Pos1`, `Pos2`, etc.) act as **unique tags**, not sequence encoders
+> - The vector encodes WHAT is at WHICH position, but not the inherent order
+> - **Encoding is unambiguous:** `loves(John, Mary)` ≠ `loves(Mary, John)` because `Pos1⊕John ≠ Pos1⊕Mary`
+> - **Decoding requires context:** The Phrasing Engine (DS11) uses semantic role templates to determine presentation order
+>
+> **Practical effect:** The binding algebra is sound for encoding and reasoning. For human-readable output, the Phrasing Engine imposes logical order based on semantic roles defined in templates (e.g., `{Pos1:Subject}`, `{Pos2:Object}`).
+
 ---
 
 ## 2.2 Tokens

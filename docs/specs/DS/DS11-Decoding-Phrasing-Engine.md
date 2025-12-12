@@ -48,6 +48,49 @@ src/decoding/
     └── Phrasing.sys2       # Core phrase templates
 ```
 
+### 13.2.1 The Phrasing Engine's Critical Role in Order Resolution
+
+> ### 🔑 THE SAVIOR COMPONENT: Phrasing Engine and Argument Order
+>
+> **Background:** Due to XOR commutativity (see DS01 §1.2.1 and DS05 §5.1), the algebraic binding operation produces vectors where argument order is NOT inherently preserved:
+>
+> ```
+> (Pos1 ⊕ A) ⊕ (Pos2 ⊕ B) = (Pos2 ⊕ B) ⊕ (Pos1 ⊕ A)
+> ```
+>
+> **The Problem:** Position vectors act as **unique tags** identifying WHAT occupies WHICH position, but they do NOT encode the sequence 1→2→3 algebraically.
+>
+> **The Solution:** The Phrasing Engine RE-IMPOSES logical order at presentation time through **role-annotated templates**.
+>
+> **How It Works:**
+> 1. **Structural Decoder** extracts arguments and their position tags (Pos1, Pos2, etc.)
+> 2. **Template Lookup** retrieves a template with explicit slot positions: `"{Pos1:Seller} sold {Pos3:Item} to {Pos2:Buyer}"`
+> 3. **Text Generator** fills slots IN THE ORDER SPECIFIED BY THE TEMPLATE, not by algebraic order
+>
+> **Key Insight:** The output order is guaranteed by the **template definition**, NOT by the vector's internal structure.
+>
+> ```
+> TEMPLATE: "{Pos1:Seller} sold {Pos3:Item} to {Pos2:Buyer}"
+>
+> INPUT (from decode):
+>   arguments = [
+>     { position: 1, value: "Alice" },
+>     { position: 2, value: "Bob" },
+>     { position: 3, value: "Book" }
+>   ]
+>
+> OUTPUT: "Alice sold Book to Bob"
+> (Order enforced by template, regardless of decoding order)
+> ```
+>
+> **Why This Works:**
+> - Position tags (`Pos1`, `Pos2`) are correctly extracted during decoding
+> - The template explicitly maps positions to presentation slots
+> - Semantic roles (`Seller`, `Buyer`, `Item`) document the intended meaning
+> - The final string follows the template's structure, not the vector's algebra
+>
+> **This makes the Phrasing Engine the authoritative component for determining argument order in human-readable output.**
+
 ---
 
 ## 13.3 Structural Decoding

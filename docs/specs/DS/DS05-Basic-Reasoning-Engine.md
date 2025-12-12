@@ -38,6 +38,29 @@ A = answer ⊕ Pos1
 
 The known parts cancel out, leaving the unknown (tagged with its position).
 
+> ### ⚠️ CRITICAL LIMITATION: Argument Order Ambiguity
+>
+> **Important clarification:** While the Master Equation correctly isolates the component `(PosN ⊕ ArgN)`, it does NOT guarantee argument order.
+>
+> **What the equation does:**
+> - Correctly cancels out known parts using XOR self-inverse property
+> - Isolates the unknown argument tagged with its position vector
+> - Returns a vector similar to the target argument
+>
+> **What it does NOT do:**
+> - Inherently encode the sequence 1→2→3 in the vector structure
+> - Guarantee order when decoding multiple arguments simultaneously
+>
+> **Why reasoning still works:**
+> - The algebra correctly distinguishes `loves(John, Mary)` from `loves(Mary, John)` because `Pos1⊕John` ≠ `Pos1⊕Mary`
+> - Query results are matched via similarity search, which finds the correct atoms
+> - However, converting results to human-readable form requires semantic context
+>
+> **Resolution:**
+> - The Phrasing Engine (DS11) uses role-annotated templates to impose logical order
+> - Templates like `{Pos1:Subject} {Verb} {Pos2:Object}` ensure correct presentation
+> - Reasoning is sound; presentation is handled by the Phrasing layer
+
 ---
 
 ## 5.2 Query Execution Pipeline
@@ -543,6 +566,7 @@ Where `decay` is typically 0.95-0.98.
 - KB capacity ~100-200 facts before saturation
 - Deep chains (>5 steps) accumulate significant noise
 - Multiple holes degrade accuracy
+- **Argument Order Loss:** Due to XOR commutativity (see 5.1), the vector structure does not inherently encode argument sequence. Position vectors act as tags, not sequence markers. Decoding relies on similarity matching and semantic context. The Phrasing Engine (DS11) is responsible for re-imposing logical order at presentation time using role-annotated templates.
 
 ---
 
