@@ -18,7 +18,9 @@
     "all": "node --test 'tests/**/*.mjs'",
     "unit": "node --test 'tests/unit/**/*.mjs'",
     "deep": "node --test 'tests/integration/**/*.mjs'",
-    "e2e": "node --test tests/integration/e2e-pipeline.test.mjs"
+    "e2e": "node --test tests/integration/e2e-pipeline.test.mjs",
+    "eval": "node evalSuite/run.js",
+    "eval:verbose": "node evalSuite/run.js --verbose"
   },
   "keywords": [
     "hdc",

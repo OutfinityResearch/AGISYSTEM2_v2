@@ -217,21 +217,30 @@ describe('Executor', () => {
       });
     });
 
-    describe('Compound', () => {
-      test('should resolve compound expression', () => {
+    describe('Intermediate Variables', () => {
+      test('should resolve reference to previous statement', () => {
         setup();
-        const program = parse('@f test (inner A B)');
+        const program = parse(`
+          @inner test A B
+          @f outer $inner
+        `);
         const result = executor.executeProgram(program);
 
         assert.ok(result.success);
+        assert.equal(result.results.length, 2);
       });
 
-      test('should nest compound expressions', () => {
+      test('should chain multiple references', () => {
         setup();
-        const program = parse('@f outer (inner (deep X))');
+        const program = parse(`
+          @a first X
+          @b second $a
+          @c third $b
+        `);
         const result = executor.executeProgram(program);
 
         assert.ok(result.success);
+        assert.equal(result.results.length, 3);
       });
     });
 

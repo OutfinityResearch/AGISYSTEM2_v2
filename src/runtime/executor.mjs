@@ -14,7 +14,6 @@ import {
   Hole,
   Reference,
   Literal,
-  Compound,
   List
 } from '../parser/ast.mjs';
 
@@ -65,6 +64,11 @@ export class Executor {
    * Execute a single statement
    * @param {Statement} stmt - Statement AST
    * @returns {Object} Result with vector
+   *
+   * Persistence rules:
+   * - @var operator args      → scope only (temporary)
+   * - @var:name operator args → scope + KB (persistent fact)
+   * - operator args (no @)    → KB only (anonymous persistent)
    */
   executeStatement(stmt) {
     if (!(stmt instanceof Statement)) {
@@ -74,16 +78,24 @@ export class Executor {
     // Build the vector for this statement
     const vector = this.buildStatementVector(stmt);
 
-    // If there's a destination, store it
+    // If there's a destination, store it in scope
     if (stmt.destination) {
       this.session.scope.set(stmt.destination, vector);
     }
 
-    // Add to knowledge base
-    this.session.addToKB(vector);
+    // Add to knowledge base only if:
+    // 1. No destination (anonymous fact) - always persistent
+    // 2. Has persistName (@var:name syntax) - explicitly persistent
+    const shouldPersist = !stmt.destination || stmt.isPersistent;
+
+    if (shouldPersist) {
+      this.session.addToKB(vector, stmt.persistName);
+    }
 
     return {
       destination: stmt.destination,
+      persistName: stmt.persistName,
+      persistent: shouldPersist,
       vector,
       statement: stmt.toString()
     };
@@ -136,10 +148,6 @@ export class Executor {
       return this.resolveLiteral(expr);
     }
 
-    if (expr instanceof Compound) {
-      return this.resolveCompound(expr);
-    }
-
     if (expr instanceof List) {
       return this.resolveList(expr);
     }
@@ -188,27 +196,6 @@ export class Executor {
     // Convert literal to canonical string form
     const strValue = String(expr.value);
     return this.session.vocabulary.getOrCreate(strValue);
-  }
-
-  /**
-   * Resolve compound expression to vector
-   */
-  resolveCompound(expr) {
-    // Recursively build vector for compound
-    const operatorVec = this.resolveExpression(expr.operator);
-
-    const positionedArgs = [];
-    for (let i = 0; i < expr.args.length; i++) {
-      const argVec = this.resolveExpression(expr.args[i]);
-      const positioned = withPosition(i + 1, argVec);
-      positionedArgs.push(positioned);
-    }
-
-    if (positionedArgs.length === 0) {
-      return operatorVec;
-    }
-
-    return bindAll(operatorVec, ...positionedArgs);
   }
 
   /**

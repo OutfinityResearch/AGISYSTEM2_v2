@@ -56,25 +56,37 @@ describe('Parser', () => {
     });
   });
 
-  describe('compound expressions', () => {
-    test('should parse compound in parentheses', () => {
-      const ast = parse('@r Implies (isA ?x Human) (isA ?x Mortal)');
-      const stmt = ast.statements[0];
+  describe('intermediate variables', () => {
+    test('should parse Implies with $references', () => {
+      // Multi-line DSL using intermediate variables instead of nested parens
+      const ast = parse(`
+        @cond isA ?x Human
+        @conc isA ?x Mortal
+        @r Implies $cond $conc
+      `);
 
-      assert.equal(stmt.operator.name, 'Implies');
-      assert.equal(stmt.args[0].type, 'Compound');
-      assert.equal(stmt.args[0].operator.name, 'isA');
-      assert.equal(stmt.args[1].type, 'Compound');
+      assert.equal(ast.statements.length, 3);
+
+      const rule = ast.statements[2];
+      assert.equal(rule.operator.name, 'Implies');
+      assert.equal(rule.args[0].type, 'Reference');
+      assert.equal(rule.args[0].name, 'cond');
+      assert.equal(rule.args[1].type, 'Reference');
+      assert.equal(rule.args[1].name, 'conc');
     });
 
-    test('should parse nested compounds', () => {
-      const ast = parse('@r Implies (And (a ?x) (b ?x)) (c ?x)');
-      const stmt = ast.statements[0];
-      const firstArg = stmt.args[0];
+    test('should parse Not with $reference', () => {
+      const ast = parse(`
+        @inner love John Alice
+        @f Not $inner
+      `);
 
-      assert.equal(firstArg.operator.name, 'And');
-      assert.equal(firstArg.args[0].type, 'Compound');
-      assert.equal(firstArg.args[1].type, 'Compound');
+      assert.equal(ast.statements.length, 2);
+
+      const notStmt = ast.statements[1];
+      assert.equal(notStmt.operator.name, 'Not');
+      assert.equal(notStmt.args[0].type, 'Reference');
+      assert.equal(notStmt.args[0].name, 'inner');
     });
   });
 
@@ -119,15 +131,16 @@ describe('Parser', () => {
       assert.equal(stmt.args[1].type, 'Identifier');
     });
 
-    test('should parse $reference in compound', () => {
-      // $ref inside a compound expression
-      const ast = parse('@b test (inner $ref X)');
+    test('should parse $reference as operator argument', () => {
+      // $ref as an argument to operator
+      const ast = parse('@b And $a $c');
       const stmt = ast.statements[0];
 
-      assert.equal(stmt.args[0].type, 'Compound');
-      assert.equal(stmt.args[0].operator.name, 'inner');
-      assert.equal(stmt.args[0].args[0].type, 'Reference');
-      assert.equal(stmt.args[0].args[0].name, 'ref');
+      assert.equal(stmt.operator.name, 'And');
+      assert.equal(stmt.args[0].type, 'Reference');
+      assert.equal(stmt.args[0].name, 'a');
+      assert.equal(stmt.args[1].type, 'Reference');
+      assert.equal(stmt.args[1].name, 'c');
     });
   });
 
@@ -152,8 +165,12 @@ describe('Parser', () => {
       assert.equal(ast.statements.length, 0);
     });
 
-    test('should throw on unclosed parenthesis', () => {
-      assert.throws(() => parse('@f Implies (isA X'), ParseError);
+    test('should ignore parentheses (not supported)', () => {
+      // Parentheses are not supported - they stop parsing
+      const ast = parse('@f test (something)');
+      const stmt = ast.statements[0];
+      // Parser stops at '(' - no args parsed after test
+      assert.equal(stmt.args.length, 0);
     });
   });
 });

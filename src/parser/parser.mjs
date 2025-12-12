@@ -14,7 +14,6 @@ import {
   Hole,
   Reference,
   Literal,
-  Compound,
   List,
   TheoryDeclaration,
   ImportStatement,
@@ -123,14 +122,25 @@ export class Parser {
 
   /**
    * Parse statement
-   * [@dest] operator arg1 arg2 ...
+   * [@dest] or [@dest:persistName] operator arg1 arg2 ...
+   * @dest = temporary variable (scope only)
+   * @dest:persistName = persistent fact (added to KB)
    */
   parseStatement() {
     let destination = null;
+    let persistName = null;
 
-    // Optional destination
+    // Optional destination with optional persist name
     if (this.check(TOKEN_TYPES.AT)) {
-      destination = this.advance().value;
+      const destValue = this.advance().value;
+      // Check if it has :persistName suffix
+      if (destValue.includes(':')) {
+        const parts = destValue.split(':');
+        destination = parts[0];
+        persistName = parts[1];
+      } else {
+        destination = destValue;
+      }
     }
 
     // Operator
@@ -152,7 +162,8 @@ export class Parser {
       operator,
       args,
       operator.line,
-      operator.column
+      operator.column,
+      persistName  // New: pass persist name to Statement
     );
   }
 
@@ -180,11 +191,19 @@ export class Parser {
       case TOKEN_TYPES.STRING:
         return this.parseString();
 
-      case TOKEN_TYPES.LPAREN:
-        return this.parseCompound();
-
       case TOKEN_TYPES.LBRACKET:
         return this.parseList();
+
+      case TOKEN_TYPES.LPAREN:
+        // Parentheses not supported - skip to closing paren
+        this.advance(); // consume (
+        while (!this.check(TOKEN_TYPES.RPAREN) && !this.isEof()) {
+          this.advance();
+        }
+        if (this.check(TOKEN_TYPES.RPAREN)) {
+          this.advance(); // consume )
+        }
+        return null;
 
       default:
         return null;
@@ -229,31 +248,6 @@ export class Parser {
   parseString() {
     const token = this.expect(TOKEN_TYPES.STRING);
     return new Literal(token.value, 'string', token.line, token.column);
-  }
-
-  /**
-   * Parse compound expression
-   * (operator arg1 arg2 ...)
-   */
-  parseCompound() {
-    const startToken = this.expect(TOKEN_TYPES.LPAREN);
-
-    // Operator
-    const operator = this.parseExpression();
-    if (!operator) {
-      throw new ParseError('Expected operator in compound expression', startToken);
-    }
-
-    // Arguments
-    const args = [];
-    while (!this.check(TOKEN_TYPES.RPAREN) && !this.isEof()) {
-      const arg = this.parseExpression();
-      if (!arg) break;
-      args.push(arg);
-    }
-
-    this.expect(TOKEN_TYPES.RPAREN);
-    return new Compound(operator, args, startToken.line, startToken.column);
   }
 
   /**

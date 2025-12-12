@@ -60,13 +60,31 @@ Each argument is bound with its **position vector** (Pos1, Pos2, etc.) before be
 
 | Token | Syntax | Purpose |
 |-------|--------|---------|
-| `@var` | Declaration | Create new variable |
-| `@var:name` | Declaration + export | Create + export as `name` |
+| `@var` | Declaration | Create **temporary** variable (scope only, NOT KB) |
+| `@var:name` | Declaration + KB | Create variable AND add to KB as `name` |
 | `@_` | Discard | Result not needed |
 | `$var` | Reference | Access any binding in scope |
 | `?var` | Hole | Unknown to solve |
 | `name` | Literal | Vector from loaded theory |
 | `#` | Comment | Ignored until EOL |
+| (no prefix) | Anonymous | Add directly to KB |
+
+**Persistence Rules:**
+
+| Form | In Scope | In KB | Use Case |
+|------|----------|-------|----------|
+| `operator arg1 arg2` | No | Yes | Simple facts |
+| `@var:name operator arg1 arg2` | Yes | Yes | Named facts |
+| `@var operator arg1 arg2` | Yes | **No** | Temporary (for references) |
+
+**Example - Building a Negation:**
+```dsl
+love John Mary              # → KB (anonymous)
+@neg love John Alice        # → scope only (NOT in KB!)
+@f1:notJohnAlice Not $neg   # → KB (the negation)
+```
+
+This ensures `prove love John Alice` returns **false** - the positive fact never entered KB.
 
 **The `@_` convention:** For operations where we don't need the result (like Load), use `@_` as destination.
 

@@ -84,9 +84,10 @@ export class Session {
   /**
    * Add vector to knowledge base
    * @param {Vector} vector - Fact vector
+   * @param {string} [name] - Optional persistent name for the fact
    */
-  addToKB(vector) {
-    this.kbFacts.push(vector);
+  addToKB(vector, name = null) {
+    this.kbFacts.push({ vector, name });
     if (this.kb === null) {
       this.kb = vector.clone();
     } else {
@@ -227,10 +228,10 @@ export class Session {
     const queryVec = this.executor.buildStatementVector(stmt);
     const matches = [];
 
-    for (const factVec of this.kbFacts) {
-      const sim = similarity(queryVec, factVec);
+    for (const fact of this.kbFacts) {
+      const sim = similarity(queryVec, fact.vector);
       if (sim > 0.5) {
-        matches.push({ similarity: sim });
+        matches.push({ similarity: sim, name: fact.name });
       }
     }
 
@@ -290,8 +291,8 @@ export class Session {
     visited.add(goalHash);
 
     // Try direct match first
-    for (const factVec of this.kbFacts) {
-      const sim = similarity(goalVec, factVec);
+    for (const fact of this.kbFacts) {
+      const sim = similarity(goalVec, fact.vector);
       if (sim > 0.7) {
         return {
           valid: true,
@@ -311,8 +312,8 @@ export class Session {
     }
 
     // Weaker direct match
-    for (const factVec of this.kbFacts) {
-      const sim = similarity(goalVec, factVec);
+    for (const fact of this.kbFacts) {
+      const sim = similarity(goalVec, fact.vector);
       if (sim > 0.55) {
         return {
           valid: true,

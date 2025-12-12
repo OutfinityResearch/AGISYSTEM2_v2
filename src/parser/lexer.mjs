@@ -151,7 +151,23 @@ export class Lexer {
       throw new LexerError('Expected identifier after @', startLine, startColumn);
     }
 
-    return new Token(TOKEN_TYPES.AT, value, startLine, startColumn);
+    // Check for :name suffix (persistent fact name)
+    let persistName = null;
+    if (this.peek() === ':') {
+      this.advance(); // skip :
+      persistName = '';
+      while (!this.isEof() && (this.isAlphaNum(this.peek()) || this.peek() === '_' || this.peek() === '-')) {
+        persistName += this.advance();
+      }
+      if (persistName.length === 0) {
+        throw new LexerError('Expected name after :', startLine, startColumn);
+      }
+    }
+
+    // Return token with persist flag in value
+    // Format: "varname" or "varname:persistname"
+    const tokenValue = persistName ? `${value}:${persistName}` : value;
+    return new Token(TOKEN_TYPES.AT, tokenValue, startLine, startColumn);
   }
 
   /**

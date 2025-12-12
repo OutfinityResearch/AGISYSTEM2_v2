@@ -26,18 +26,27 @@ export class Program extends ASTNode {
 
 /**
  * Statement with destination label
- * @dest operator arg1 arg2 ...
+ * @dest operator arg1 arg2 ...           - temporary (scope only)
+ * @dest:persistName operator arg1 arg2 ... - persistent (added to KB)
  */
 export class Statement extends ASTNode {
-  constructor(destination, operator, args, line, column) {
+  constructor(destination, operator, args, line, column, persistName = null) {
     super('Statement', line, column);
-    this.destination = destination; // string or null
+    this.destination = destination; // string or null - variable name in scope
+    this.persistName = persistName; // string or null - if set, add to KB
     this.operator = operator;       // Expression
     this.args = args;               // Expression[]
   }
 
+  /** Whether this statement should be added to KB */
+  get isPersistent() {
+    return this.persistName !== null;
+  }
+
   toString() {
-    const dest = this.destination ? `@${this.destination} ` : '';
+    const dest = this.destination
+      ? (this.persistName ? `@${this.destination}:${this.persistName} ` : `@${this.destination} `)
+      : '';
     const args = this.args.map(a => a.toString()).join(' ');
     return `${dest}${this.operator.toString()} ${args}`.trim();
   }
