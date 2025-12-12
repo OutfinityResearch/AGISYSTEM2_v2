@@ -1,0 +1,416 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Specifications Matrix - AGISystem2</title>
+  <link rel="stylesheet" href="../reference/style.css">
+  <style>
+    .spec-nav {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    .spec-nav a {
+      padding: 10px 20px;
+      background: #e3f2fd;
+      border-radius: 5px;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .spec-nav a:hover {
+      background: #bbdefb;
+    }
+    .doc-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .doc-item {
+      padding: 15px;
+      background: #fafafa;
+      border-radius: 5px;
+      border-left: 4px solid #1976d2;
+    }
+    .doc-item h4 {
+      margin: 0 0 5px 0;
+      font-size: 1em;
+    }
+    .doc-item p {
+      margin: 0;
+      color: #666;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+  <div class="nav-header">
+    <h1>Specifications Matrix</h1>
+    <small>
+      <a href="../index.html">Home</a> &middot;
+      <a href="../architecture/index.html">Architecture</a> &middot;
+      <a href="../theory/index.html">Theory</a> &middot;
+      <a href="../syntax/index.html">Syntax</a> &middot;
+      <a href="../api/index.html">APIs</a> &middot;
+      <a href="../wiki/index.html">Wiki</a> &middot;
+      <a href="matrix.html">Specs</a>
+    </small>
+    <small>GAMP-compliant specification documentation</small>
+  </div>
+
+  <div class="section-intro">
+    <p>Complete traceability matrix for AGISystem2 specifications following GAMP Category 5 guidelines. All requirements are traceable from user needs through design to implementation.</p>
+  </div>
+
+  <div class="spec-nav">
+    <a href="../specsLoader.html?spec=URS.md">URS - User Requirements</a>
+    <a href="../specsLoader.html?spec=FS.md">FS - Functional Spec</a>
+    <a href="../specsLoader.html?spec=NFS.md">NFS - Non-Functional Spec</a>
+    <a href="#ds">DS - Design Specs</a>
+    <a href="../gamp/index.html">GAMP Matrix</a>
+  </div>
+
+  <h2>Document Overview</h2>
+
+  <table>
+    <tr>
+      <th>Document</th>
+      <th>Type</th>
+      <th>Requirements</th>
+      <th>Status</th>
+    </tr>
+    <tr>
+      <td><a href="../specsLoader.html?spec=URS.md">URS.md</a></td>
+      <td>User Requirements Specification</td>
+      <td>URS-01 to URS-40</td>
+      <td><span class="badge badge-success">Complete</span></td>
+    </tr>
+    <tr>
+      <td><a href="../specsLoader.html?spec=FS.md">FS.md</a></td>
+      <td>Functional Specification</td>
+      <td>FS-01 to FS-90</td>
+      <td><span class="badge badge-success">Complete</span></td>
+    </tr>
+    <tr>
+      <td><a href="../specsLoader.html?spec=NFS.md">NFS.md</a></td>
+      <td>Non-Functional Specification</td>
+      <td>NFS-01 to NFS-91</td>
+      <td><span class="badge badge-success">Complete</span></td>
+    </tr>
+    <tr>
+      <td>DS00 - DS11</td>
+      <td>Design Specifications</td>
+      <td>12 documents</td>
+      <td><span class="badge badge-success">Complete</span></td>
+    </tr>
+  </table>
+
+  <h2 id="ds">Design Specifications</h2>
+
+  <div class="doc-list">
+    <div class="doc-item">
+      <h4><a href="DS/DS00-Vision.md">DS00 - Vision</a></h4>
+      <p>Project vision, problem statement, and strategic goals</p>
+    </div>
+    <div class="doc-item">
+      <h4><a href="DS/DS01-Theoretical-Foundation.md">DS01 - Theoretical Foundation</a></h4>
+      <p>HDC mathematics, vector operations, proofs</p>
+    </div>
+    <div class="doc-item">
+      <h4><a href="DS/DS02-DSL-Syntax.md">DS02 - DSL Syntax</a></h4>
+      <p>Sys2DSL language specification</p>
+    </div>
+    <div class="doc-item">
+      <h4><a href="DS/DS03-Architecture.md">DS03 - Architecture</a></h4>
+      <p>System architecture and API design</p>
+    </div>
+    <div class="doc-item">
+      <h4><a href="DS/DS03-Memory-Model.md">DS03 - Memory Model</a></h4>
+      <p>Knowledge organization and storage</p>
+    </div>
+    <div class="doc-item">
+      <h4><a href="DS/DS05-Basic-Reasoning-Engine.md">DS05 - Basic Reasoning</a></h4>
+      <p>Query execution and inference</p>
+    </div>
+    <div class="doc-item">
+      <h4><a href="DS/DS06-Advanced-Reasoning.md">DS06 - Advanced Reasoning</a></h4>
+      <p>Abduction, induction, counterfactuals</p>
+    </div>
+    <div class="doc-item">
+      <h4><a href="DS/DS07-Core-Theory.md">DS07 - Core Theory</a></h4>
+      <p>Built-in atoms, types, and primitives</p>
+    </div>
+    <div class="doc-item">
+      <h4><a href="DS/DS08-ThurstworthyAI-Patterns.md">DS08 - Trustworthy AI</a></h4>
+      <p>Implementation patterns for compliance</p>
+    </div>
+    <div class="doc-item">
+      <h4><a href="DS/DS09-Core-HDC-Implementation.md">DS09 - Core HDC</a></h4>
+      <p>Low-level HDC implementation details</p>
+    </div>
+    <div class="doc-item">
+      <h4><a href="DS/DS10-Code-Plan.md">DS10 - Code Plan</a></h4>
+      <p>Module structure and implementation roadmap</p>
+    </div>
+    <div class="doc-item">
+      <h4><a href="DS/DS11-Decoding-Phrasing-Engine.md">DS11 - Decoding Engine</a></h4>
+      <p>Vector to natural language transformation</p>
+    </div>
+  </div>
+
+  <h2>Traceability Overview</h2>
+
+  <div class="diagram-container">
+    <div class="diagram-title">Requirements Traceability Flow</div>
+    <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#666"/>
+        </marker>
+      </defs>
+
+      <!-- URS Box -->
+      <rect x="50" y="30" width="150" height="80" rx="10" fill="#e3f2fd" stroke="#1976d2" stroke-width="2"/>
+      <text x="125" y="55" text-anchor="middle" font-weight="bold" font-size="14" fill="#1976d2">URS</text>
+      <text x="125" y="75" text-anchor="middle" font-size="11" fill="#333">User Requirements</text>
+      <text x="125" y="95" text-anchor="middle" font-size="10" fill="#666">URS-01 to URS-40</text>
+
+      <!-- FS Box -->
+      <rect x="250" y="30" width="150" height="80" rx="10" fill="#e8f5e9" stroke="#4caf50" stroke-width="2"/>
+      <text x="325" y="55" text-anchor="middle" font-weight="bold" font-size="14" fill="#4caf50">FS</text>
+      <text x="325" y="75" text-anchor="middle" font-size="11" fill="#333">Functional Spec</text>
+      <text x="325" y="95" text-anchor="middle" font-size="10" fill="#666">FS-01 to FS-90</text>
+
+      <!-- NFS Box -->
+      <rect x="450" y="30" width="150" height="80" rx="10" fill="#fff3e0" stroke="#ff9800" stroke-width="2"/>
+      <text x="525" y="55" text-anchor="middle" font-weight="bold" font-size="14" fill="#e65100">NFS</text>
+      <text x="525" y="75" text-anchor="middle" font-size="11" fill="#333">Non-Functional Spec</text>
+      <text x="525" y="95" text-anchor="middle" font-size="10" fill="#666">NFS-01 to NFS-91</text>
+
+      <!-- DS Box -->
+      <rect x="250" y="150" width="300" height="80" rx="10" fill="#fce4ec" stroke="#e91e63" stroke-width="2"/>
+      <text x="400" y="175" text-anchor="middle" font-weight="bold" font-size="14" fill="#c2185b">DS</text>
+      <text x="400" y="195" text-anchor="middle" font-size="11" fill="#333">Design Specifications</text>
+      <text x="400" y="215" text-anchor="middle" font-size="10" fill="#666">DS00 to DS11 (12 documents)</text>
+
+      <!-- Code Plan Box -->
+      <rect x="300" y="260" width="200" height="30" rx="5" fill="#f3e5f5" stroke="#9c27b0" stroke-width="2"/>
+      <text x="400" y="280" text-anchor="middle" font-size="11" fill="#333">Code Plans (src/*.md)</text>
+
+      <!-- Arrows -->
+      <path d="M200 70 L245 70" stroke="#666" stroke-width="2" marker-end="url(#arrow)"/>
+      <path d="M400 70 L445 70" stroke="#666" stroke-width="2" marker-end="url(#arrow)"/>
+      <path d="M325 110 L325 145" stroke="#666" stroke-width="2" marker-end="url(#arrow)"/>
+      <path d="M525 110 L475 145" stroke="#666" stroke-width="2" marker-end="url(#arrow)"/>
+      <path d="M400 230 L400 255" stroke="#666" stroke-width="2" marker-end="url(#arrow)"/>
+    </svg>
+  </div>
+
+  <h2>Requirements Summary</h2>
+
+  <h3>URS Categories (40 requirements)</h3>
+
+  <table>
+    <tr>
+      <th>Category</th>
+      <th>IDs</th>
+      <th>Count</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>Core Reasoning</td>
+      <td>URS-01 to URS-05</td>
+      <td>5</td>
+      <td>Determinism, explainability, confidence</td>
+    </tr>
+    <tr>
+      <td>Knowledge Management</td>
+      <td>URS-06 to URS-10</td>
+      <td>5</td>
+      <td>Theories, versioning, persistence</td>
+    </tr>
+    <tr>
+      <td>Language & Interface</td>
+      <td>URS-11 to URS-15</td>
+      <td>5</td>
+      <td>DSL, queries, API</td>
+    </tr>
+    <tr>
+      <td>Explainability</td>
+      <td>URS-16 to URS-20</td>
+      <td>5</td>
+      <td>Traces, explanations, proofs</td>
+    </tr>
+    <tr>
+      <td>Performance</td>
+      <td>URS-21 to URS-24</td>
+      <td>4</td>
+      <td>Response time, capacity</td>
+    </tr>
+    <tr>
+      <td>Integration</td>
+      <td>URS-25 to URS-29</td>
+      <td>5</td>
+      <td>LLM, tools, environments</td>
+    </tr>
+    <tr>
+      <td>Compliance</td>
+      <td>URS-30 to URS-33</td>
+      <td>4</td>
+      <td>Audit, regulations</td>
+    </tr>
+    <tr>
+      <td>Security</td>
+      <td>URS-34 to URS-36</td>
+      <td>3</td>
+      <td>Data protection, validation</td>
+    </tr>
+    <tr>
+      <td>Usability</td>
+      <td>URS-37 to URS-40</td>
+      <td>4</td>
+      <td>Documentation, debugging</td>
+    </tr>
+  </table>
+
+  <h3>FS Categories (90 requirements)</h3>
+
+  <table>
+    <tr>
+      <th>Category</th>
+      <th>IDs</th>
+      <th>Count</th>
+    </tr>
+    <tr>
+      <td>Core HDC Operations</td>
+      <td>FS-01 to FS-07</td>
+      <td>7</td>
+    </tr>
+    <tr>
+      <td>DSL Parser</td>
+      <td>FS-08 to FS-16</td>
+      <td>9</td>
+    </tr>
+    <tr>
+      <td>Theory Management</td>
+      <td>FS-17 to FS-24</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>Session Management</td>
+      <td>FS-25 to FS-33</td>
+      <td>9</td>
+    </tr>
+    <tr>
+      <td>Executor</td>
+      <td>FS-34 to FS-40</td>
+      <td>7</td>
+    </tr>
+    <tr>
+      <td>Query Engine</td>
+      <td>FS-41 to FS-48</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>Proof Engine</td>
+      <td>FS-49 to FS-56</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>Decoding & Phrasing</td>
+      <td>FS-57 to FS-65</td>
+      <td>9</td>
+    </tr>
+    <tr>
+      <td>Core Theory Content</td>
+      <td>FS-66 to FS-72</td>
+      <td>7</td>
+    </tr>
+    <tr>
+      <td>Error Handling</td>
+      <td>FS-73 to FS-78</td>
+      <td>6</td>
+    </tr>
+    <tr>
+      <td>Debug Utilities</td>
+      <td>FS-79 to FS-85</td>
+      <td>7</td>
+    </tr>
+    <tr>
+      <td>Audit & Tracing</td>
+      <td>FS-86 to FS-90</td>
+      <td>5</td>
+    </tr>
+  </table>
+
+  <h3>NFS Categories (91 requirements)</h3>
+
+  <table>
+    <tr>
+      <th>Category</th>
+      <th>IDs</th>
+      <th>Count</th>
+    </tr>
+    <tr>
+      <td>Performance</td>
+      <td>NFS-01 to NFS-18</td>
+      <td>18</td>
+    </tr>
+    <tr>
+      <td>Reliability</td>
+      <td>NFS-19 to NFS-29</td>
+      <td>11</td>
+    </tr>
+    <tr>
+      <td>Memory & Resources</td>
+      <td>NFS-30 to NFS-41</td>
+      <td>12</td>
+    </tr>
+    <tr>
+      <td>Security</td>
+      <td>NFS-42 to NFS-50</td>
+      <td>9</td>
+    </tr>
+    <tr>
+      <td>Maintainability</td>
+      <td>NFS-51 to NFS-60</td>
+      <td>10</td>
+    </tr>
+    <tr>
+      <td>Usability</td>
+      <td>NFS-61 to NFS-68</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>Compatibility</td>
+      <td>NFS-69 to NFS-76</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>Operations</td>
+      <td>NFS-77 to NFS-87</td>
+      <td>11</td>
+    </tr>
+    <tr>
+      <td>Compliance</td>
+      <td>NFS-88 to NFS-91</td>
+      <td>4</td>
+    </tr>
+  </table>
+
+  <h2>Related Links</h2>
+
+  <ul>
+    <li><a href="../gamp/index.html">Complete GAMP Traceability Matrix</a></li>
+    <li><a href="src/">Code Plans (Module-level specifications)</a></li>
+    <li><a href="../architecture/index.html">Architecture Overview</a></li>
+  </ul>
+
+  <div class="footer-nav">
+    <p>All specifications follow GAMP Category 5 guidelines for custom applications.</p>
+  </div>
+  </div>
+</body>
+</html>

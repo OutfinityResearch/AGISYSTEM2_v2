@@ -1,0 +1,463 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Syntax - AGISystem2</title>
+  <link rel="stylesheet" href="../reference/style.css">
+</head>
+<body>
+  <div class="page">
+  <div class="nav-header">
+    <h1>Sys2DSL Syntax Reference</h1>
+    <small>
+      <a href="../index.html">Home</a> &middot;
+      <a href="../architecture/index.html">Architecture</a> &middot;
+      <a href="../theory/index.html">Theory</a> &middot;
+      <a href="index.html">Syntax</a> &middot;
+      <a href="../api/index.html">APIs</a> &middot;
+      <a href="../wiki/index.html">Wiki</a> &middot;
+      <a href="../specs/matrix.html">Specs</a>
+    </small>
+    <small>Domain-Specific Language for knowledge representation</small>
+  </div>
+
+  <div class="section-intro">
+    <p><strong>Sys2DSL</strong> (System 2 Domain-Specific Language) is a minimal, uniform language where every statement encodes semantic relationships as Subject-Verb-Object triplets. All concepts, facts, and operations are represented as vectors.</p>
+  </div>
+
+  <h2>Core Principle</h2>
+
+  <div class="alert alert-info">
+    <strong>"Everything is a Vector"</strong>
+    <p>Atoms, operators, facts, roles, and theories are ALL represented as hypervectors. The DSL provides human-readable syntax that compiles to vector operations.</p>
+  </div>
+
+  <h2>Basic Statement Syntax</h2>
+
+  <pre><code>@destination operator arg1 arg2 arg3 ...</code></pre>
+
+  <p>Every statement has:</p>
+  <ul>
+    <li><strong>@destination</strong> - Where to store the result (variable name)</li>
+    <li><strong>operator</strong> - The relation or action (verb)</li>
+    <li><strong>arguments</strong> - The participants (subject, object, etc.)</li>
+  </ul>
+
+  <h3>Examples</h3>
+
+  <pre><code># Simple fact
+@fact1 loves John Mary
+
+# With numeric argument
+@sale sell Alice Bob Car 1000
+
+# Query with hole (unknown value)
+@answer buy ?who Book ?seller ?price
+
+# Discard result (underscore)
+@_ Load $Commerce</code></pre>
+
+  <h2>Token Types</h2>
+
+  <table>
+    <tr>
+      <th>Token</th>
+      <th>Syntax</th>
+      <th>Purpose</th>
+      <th>Example</th>
+    </tr>
+    <tr>
+      <td><code>@var</code></td>
+      <td>Declaration</td>
+      <td>Create and assign variable</td>
+      <td><code>@f1 loves John Mary</code></td>
+    </tr>
+    <tr>
+      <td><code>@var:name</code></td>
+      <td>Export</td>
+      <td>Create variable and export as name</td>
+      <td><code>@Person:Person __Atom</code></td>
+    </tr>
+    <tr>
+      <td><code>@_</code></td>
+      <td>Discard</td>
+      <td>Execute but don't store result</td>
+      <td><code>@_ Load $Theory</code></td>
+    </tr>
+    <tr>
+      <td><code>$var</code></td>
+      <td>Reference</td>
+      <td>Access existing variable</td>
+      <td><code>@f2 isA $John Person</code></td>
+    </tr>
+    <tr>
+      <td><code>?var</code></td>
+      <td>Hole</td>
+      <td>Unknown value to find</td>
+      <td><code>@q loves ?who Mary</code></td>
+    </tr>
+    <tr>
+      <td><code>name</code></td>
+      <td>Literal</td>
+      <td>Atom from vocabulary</td>
+      <td><code>John</code>, <code>loves</code></td>
+    </tr>
+    <tr>
+      <td><code>#</code></td>
+      <td>Comment</td>
+      <td>Ignored until end of line</td>
+      <td><code># This is a comment</code></td>
+    </tr>
+  </table>
+
+  <h2>Abstraction Levels</h2>
+
+  <p>Names follow a prefix convention indicating abstraction level:</p>
+
+  <table>
+    <tr>
+      <th>Level</th>
+      <th>Prefix</th>
+      <th>Purpose</th>
+      <th>User</th>
+      <th>Example</th>
+    </tr>
+    <tr>
+      <td>L0</td>
+      <td><code>___</code></td>
+      <td>HDC primitives</td>
+      <td>Runtime only</td>
+      <td><code>___Bind</code></td>
+    </tr>
+    <tr>
+      <td>L1</td>
+      <td><code>__</code></td>
+      <td>Structural operations</td>
+      <td>Core theory</td>
+      <td><code>__Atom</code>, <code>__Bundle</code></td>
+    </tr>
+    <tr>
+      <td>L2</td>
+      <td><code>_</code></td>
+      <td>Semantic primitives</td>
+      <td>Knowledge engineers</td>
+      <td><code>_ptrans</code>, <code>_atrans</code></td>
+    </tr>
+    <tr>
+      <td>L3+</td>
+      <td>(none)</td>
+      <td>Domain concepts</td>
+      <td>End users</td>
+      <td><code>Person</code>, <code>loves</code></td>
+    </tr>
+  </table>
+
+  <h2>Theory Definition</h2>
+
+  <p>Theories are named collections of atoms, macros, and rules:</p>
+
+  <pre><code>@TheoryName theory GEOMETRY INIT_MODE
+
+    # Atom definitions
+    @AtomName:AtomName __Atom
+
+    # Exported atoms
+    @Person:Person __Category
+    @Place:Place __Category
+
+    # Macros
+    @MyMacro:myMacro macro param1 param2
+        # macro body
+        @result __Bundle $param1 $param2
+        return $result
+    end
+
+    # Rules
+    @rule1 Implies (isA ?x Human) (isA ?x Mortal)
+
+end</code></pre>
+
+  <h3>Theory Parameters</h3>
+
+  <table>
+    <tr>
+      <th>Parameter</th>
+      <th>Values</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td>GEOMETRY</td>
+      <td>1024, 8192, 32768, 65536</td>
+      <td>Vector dimension in bits</td>
+    </tr>
+    <tr>
+      <td>INIT_MODE</td>
+      <td><code>deterministic</code>, <code>random</code></td>
+      <td>How atoms are initialized</td>
+    </tr>
+  </table>
+
+  <h2>Macro Definition</h2>
+
+  <p>Macros are reusable statement templates:</p>
+
+  <pre><code>@MacroName:exportName macro param1 param2 param3
+    # Statements using parameters
+    @local1 someOp $param1 $param2
+    @local2 otherOp $local1 $param3
+
+    # Return value
+    return $local2
+end</code></pre>
+
+  <h3>Macro Usage</h3>
+
+  <pre><code># Define macro
+@DefinePerson:person macro name age occupation
+    @p1 isA $name Person
+    @p2 hasAge $name $age
+    @p3 hasJob $name $occupation
+    @result __Bundle $p1 $p2 $p3
+    return $result
+end
+
+# Use macro
+@john person John 30 Engineer
+@mary person Mary 25 Doctor</code></pre>
+
+  <h2>Query Syntax</h2>
+
+  <p>Queries use <code>?</code> prefix for unknown values (holes):</p>
+
+  <pre><code># Single hole - "Who loves Mary?"
+@q1 loves ?who Mary
+
+# Multiple holes - "Who bought what from whom?"
+@q2 buy ?buyer ?item ?seller
+
+# Mixed known and unknown
+@q3 sell Alice ?what Bob</code></pre>
+
+  <h3>Query Results</h3>
+
+  <pre><code>QueryResult {
+  success: true,
+  bindings: {
+    "who": { answer: "John", similarity: 0.78, alternatives: [...] }
+  },
+  confidence: 0.78,
+  ambiguous: false
+}</code></pre>
+
+  <h2>Built-in Operations</h2>
+
+  <h3>L0: HDC Primitives (Runtime)</h3>
+
+  <table>
+    <tr>
+      <th>Operation</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><code>___Bind A B</code></td>
+      <td>XOR of two vectors</td>
+    </tr>
+    <tr>
+      <td><code>___Bundle [A B C]</code></td>
+      <td>Majority vote of vectors</td>
+    </tr>
+    <tr>
+      <td><code>___Similarity A B</code></td>
+      <td>Similarity score (0.0-1.0)</td>
+    </tr>
+  </table>
+
+  <h3>L1: Structural Operations (Core Theory)</h3>
+
+  <table>
+    <tr>
+      <th>Operation</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><code>__Atom</code></td>
+      <td>Create new atom</td>
+    </tr>
+    <tr>
+      <td><code>__Bundle</code></td>
+      <td>Create set/superposition</td>
+    </tr>
+    <tr>
+      <td><code>__Role name vector</code></td>
+      <td>Tag vector with semantic role</td>
+    </tr>
+    <tr>
+      <td><code>__Category</code></td>
+      <td>Define type category</td>
+    </tr>
+  </table>
+
+  <h3>L2: Logic Operations</h3>
+
+  <table>
+    <tr>
+      <th>Operation</th>
+      <th>Description</th>
+      <th>Example</th>
+    </tr>
+    <tr>
+      <td><code>Implies A B</code></td>
+      <td>If A then B</td>
+      <td><code>@r Implies (isA ?x Human) (isA ?x Mortal)</code></td>
+    </tr>
+    <tr>
+      <td><code>And A B</code></td>
+      <td>Both A and B</td>
+      <td><code>@c And $cond1 $cond2</code></td>
+    </tr>
+    <tr>
+      <td><code>Or A B</code></td>
+      <td>Either A or B</td>
+      <td><code>@d Or $opt1 $opt2</code></td>
+    </tr>
+    <tr>
+      <td><code>Not A</code></td>
+      <td>Negation of A</td>
+      <td><code>@n Not $fact</code></td>
+    </tr>
+    <tr>
+      <td><code>ForAll ?x P</code></td>
+      <td>Universal quantification</td>
+      <td><code>ForAll ?x (Implies (Human ?x) (Mortal ?x))</code></td>
+    </tr>
+    <tr>
+      <td><code>Exists ?x P</code></td>
+      <td>Existential quantification</td>
+      <td><code>Exists ?x (loves ?x Mary)</code></td>
+    </tr>
+  </table>
+
+  <h2>Session Commands</h2>
+
+  <pre><code># Load a theory
+@_ Load $TheoryName
+
+# Create session-local fact
+@myFact someRelation Subject Object
+
+# Query knowledge base
+@result query loves ?who Mary
+
+# Prove a goal
+@proof prove isA Socrates Mortal</code></pre>
+
+  <h2>Complete Example</h2>
+
+  <pre><code># ============ Theory Definition ============
+@Family theory 32768 deterministic
+
+    # Types
+    @Person:Person __Category
+    @Relationship:Relationship __Category
+
+    # Relation atoms
+    @loves:loves __Relation
+    @parent:parent __Relation
+    @sibling:sibling __Relation
+
+    # Rule: siblings share parent
+    @siblingRule Implies
+        (And (parent ?p ?x) (parent ?p ?y) (Not (equals ?x ?y)))
+        (sibling ?x ?y)
+
+end
+
+# ============ Session Usage ============
+
+# Load theory
+@_ Load $Family
+
+# Add facts
+@f1 parent Alice Charlie
+@f2 parent Alice Diana
+@f3 parent Bob Charlie
+@f4 parent Bob Diana
+@f5 loves Charlie Diana
+
+# Query: Who are Charlie's siblings?
+@q sibling Charlie ?who
+
+# Result: ?who = Diana (confidence: 0.82)</code></pre>
+
+  <h2>Syntax Diagram</h2>
+
+  <div class="diagram-container">
+    <div class="diagram-title">Statement Structure</div>
+    <svg viewBox="0 0 700 100" xmlns="http://www.w3.org/2000/svg">
+      <!-- Boxes -->
+      <rect x="20" y="30" width="80" height="40" rx="5" fill="#e3f2fd" stroke="#1976d2"/>
+      <text x="60" y="55" text-anchor="middle" font-size="11">@dest</text>
+
+      <rect x="120" y="30" width="100" height="40" rx="5" fill="#e8f5e9" stroke="#4caf50"/>
+      <text x="170" y="55" text-anchor="middle" font-size="11">operator</text>
+
+      <rect x="240" y="30" width="80" height="40" rx="5" fill="#fff3e0" stroke="#ff9800"/>
+      <text x="280" y="55" text-anchor="middle" font-size="11">arg1</text>
+
+      <rect x="340" y="30" width="80" height="40" rx="5" fill="#fff3e0" stroke="#ff9800"/>
+      <text x="380" y="55" text-anchor="middle" font-size="11">arg2</text>
+
+      <rect x="440" y="30" width="80" height="40" rx="5" fill="#fff3e0" stroke="#ff9800"/>
+      <text x="480" y="55" text-anchor="middle" font-size="11">...</text>
+
+      <!-- Labels -->
+      <text x="60" y="85" text-anchor="middle" font-size="9" fill="#666">destination</text>
+      <text x="170" y="85" text-anchor="middle" font-size="9" fill="#666">verb/relation</text>
+      <text x="380" y="85" text-anchor="middle" font-size="9" fill="#666">arguments</text>
+    </svg>
+  </div>
+
+  <h2>Error Messages</h2>
+
+  <table>
+    <tr>
+      <th>Error</th>
+      <th>Cause</th>
+      <th>Solution</th>
+    </tr>
+    <tr>
+      <td>Undefined reference: $name</td>
+      <td>Variable not in scope</td>
+      <td>Define variable first or load theory</td>
+    </tr>
+    <tr>
+      <td>Unexpected token: X</td>
+      <td>Syntax error</td>
+      <td>Check statement format</td>
+    </tr>
+    <tr>
+      <td>Theory not found: Name</td>
+      <td>Theory file missing</td>
+      <td>Verify theory path</td>
+    </tr>
+    <tr>
+      <td>Low confidence: 0.45</td>
+      <td>Query match is weak</td>
+      <td>Refine query or add facts</td>
+    </tr>
+  </table>
+
+  <h2>Related Documentation</h2>
+
+  <ul>
+    <li><a href="../specs/DS/DS02-DSL-Syntax.md">DS02 - Complete DSL Specification</a></li>
+    <li><a href="../api/index.html">API Reference</a> - Using DSL programmatically</li>
+    <li><a href="../specs/DS/DS07-Core-Theory.md">DS07 - Core Theory Reference</a></li>
+  </ul>
+
+  <div class="footer-nav">
+    <p>Sys2DSL provides a minimal, uniform syntax for representing knowledge as vector operations.</p>
+  </div>
+  </div>
+</body>
+</html>
