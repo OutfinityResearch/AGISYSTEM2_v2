@@ -1,0 +1,184 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Spock AGISystem2 – Documentation</title>
+  <link rel="stylesheet" href="reference/style.css">
+</head>
+<body>
+  <div class="page">
+  <div class="nav-header">
+    <h1>Spock AGISystem2 – Geometric Operating System</h1>
+    <small>
+      <a href="index.html">Home</a> ·
+      <a href="architecture/index.html">Architecture</a> ·
+      <a href="theory/index.html">Theory</a> ·
+      <a href="syntax/index.html">Syntax</a> ·
+      <a href="api/index.html">APIs</a> ·
+      <a href="wiki/index.html">Wiki</a> ·
+      <a href="specs/matrix.html">Specs</a>
+    </small>
+    <small>Deterministic neuro-symbolic geometry for explainable reasoning</small>
+  </div>
+
+  <div class="section-intro">
+    <p>Spock is a <strong>Geometric Operating System (GOS)</strong> for neuro-symbolic reasoning. It represents concepts, facts, relations and theories as points or regions in a high-dimensional conceptual space (hypervectors) and executes reasoning, planning and explanation through a formally defined DSL based on Subject–Verb–Object triplets.</p>
+  </div>
+
+  <h2>What Spock Is Good For</h2>
+  <ul>
+    <li><strong>Deterministic Reasoning:</strong> Unlike probabilistic LLMs, Spock produces reproducible, explainable results with provenance trails.</li>
+    <li><strong>Theory Management:</strong> Manage multiple competing theories, branch and merge them, and reason across different worldviews.</li>
+    <li><strong>Numeric Integration:</strong> Seamlessly combine geometric reasoning with physical quantities and units.</li>
+    <li><strong>Explainability:</strong> Every answer comes with a DSL trace that can be replayed and audited.</li>
+  </ul>
+
+  <h2>Core Concepts</h2>
+  <table class="matrix-table">
+    <tr>
+      <td><strong>Hypervectors</strong></td>
+      <td>High-dimensional vectors (512+ dimensions) that represent concepts, facts, and states in a continuous geometric space.</td>
+    </tr>
+    <tr>
+      <td><strong>SpockDSL</strong></td>
+      <td>A minimal, uniform DSL where every statement has the form <code>@varName subject verb object</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>Theories</strong></td>
+      <td>Named collections of facts and verb definitions that can be persisted, versioned, and overlaid.</td>
+    </tr>
+    <tr>
+      <td><strong>Sessions</strong></td>
+      <td>Temporary working contexts that overlay theories and host local facts for reasoning.</td>
+    </tr>
+    <tr>
+      <td><strong>Verbs</strong></td>
+      <td>Binary relations implemented as geometric transformations: kernel verbs (Add, Bind), logical verbs (Implies, And), and domain verbs.</td>
+    </tr>
+  </table>
+
+  <h2>Documentation Sections</h2>
+
+  <div class="section-grid">
+    <div class="section-card">
+      <h3><a href="architecture/index.html">Architecture</a></h3>
+      <p>Layered overview of the main modules: kernel, DSL engine, theory management, sessions, and APIs.</p>
+    </div>
+
+    <div class="section-card">
+      <h3><a href="theory/index.html">Foundational Theory</a></h3>
+      <p>Why Spock works: hyperdimensional computing, geometric truth, VSA operations, semantic navigation, and explainability.</p>
+    </div>
+
+    <div class="section-card">
+      <h3><a href="syntax/index.html">SpockDSL Syntax</a></h3>
+      <p>Complete language reference: statements, macros, theories, verbs, sessions, and execution semantics.</p>
+    </div>
+
+    <div class="section-card">
+      <h3><a href="api/index.html">Public APIs</a></h3>
+      <p>API documentation for <code>createSpockEngine</code>, sessions, and high-level methods: learn, ask, prove, explain, plan, solve, summarise.</p>
+    </div>
+
+    <div class="section-card">
+      <h3><a href="wiki/index.html">Quick Wiki</a></h3>
+      <p>Compact glossary of terms and concepts with links to detailed documentation.</p>
+    </div>
+
+    <div class="section-card">
+      <h3><a href="specs/matrix.html">Specifications</a></h3>
+      <p>Full traceability matrix: URS, FS, NFS, Design Specs, Test Specs, and Evaluation Suites.</p>
+    </div>
+
+    <div class="section-card">
+      <h3><a href="guides/index.html">Guides</a></h3>
+      <p>Conceptual guides on geometric reasoning, theory layering, bias control, and explainability.</p>
+    </div>
+  </div>
+
+  <h2>Quick Start Example</h2>
+  <pre><code>// Create engine
+const engine = createSpockEngine({ dimensions: 512 });
+const session = engine.createSession();
+const api = createSessionApi(session);
+
+// Learn some facts
+api.learn(`
+  @f1 Socrates Is Human
+  @f2 Humans Are Mortal
+`);
+
+// Ask a question
+const result = api.ask(`
+  @query Socrates Is Mortal
+  @eval query Evaluate Truth
+`);
+
+console.log(result.scores.truth); // ~1.0
+console.log(result.dslOutput);    // Replayable DSL trace
+</code></pre>
+
+  <h2>Specification Documents</h2>
+  <ul>
+    <li><a href="specsLoader.html?spec=URS.md">URS – User Requirements Specification</a></li>
+    <li><a href="specsLoader.html?spec=FS.md">FS – Functional Specification</a></li>
+    <li><a href="specsLoader.html?spec=NFS.md">NFS – Non-Functional Specification</a></li>
+    <li><a href="specsLoader.html?spec=DS_map.md">DS – Design Specification Map</a></li>
+    <li><a href="specsLoader.html?spec=DS_tests_map.md">DS – Test Suite Map</a></li>
+    <li><a href="specsLoader.html?spec=DS_eval_map.md">DS – Evaluation Suite Map</a></li>
+  </ul>
+
+  <div class="footer-nav">
+    <p>Spock GOS is designed for deterministic, explainable reasoning with full provenance tracking. All outputs can be represented as DSL scripts and replayed for verification.</p>
+  </div>
+  </div>
+
+  <style>
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+    .matrix-table td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      vertical-align: top;
+    }
+    .matrix-table td:first-child {
+      width: 150px;
+      background: #f5f5f5;
+    }
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .section-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .section-card h3 {
+      margin-top: 0;
+    }
+    .section-card h3 a {
+      color: #1976d2;
+      text-decoration: none;
+    }
+    .section-card h3 a:hover {
+      text-decoration: underline;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    code {
+      font-family: 'Consolas', 'Monaco', monospace;
+    }
+  </style>
+</body>
+</html>
