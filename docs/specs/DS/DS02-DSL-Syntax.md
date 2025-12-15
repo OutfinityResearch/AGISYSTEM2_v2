@@ -88,6 +88,25 @@ This ensures `prove love John Alice` returns **false** - the positive fact never
 
 **The `@_` convention:** For operations where we don't need the result (like Load), use `@_` as destination.
 
+> ### ⚠️ IMPORTANT: No Parenthesized Compound Expressions
+>
+> Sys2DSL does **NOT** support parenthesized compound expressions inline:
+> ```
+> # NOT SUPPORTED:
+> @rule Implies (And $c1 $c2) $conclusion
+> ```
+>
+> **Correct approach - define parts as separate statements:**
+> ```
+> @c1 hasState Door Open
+> @c2 isA Door Entrance
+> @cond And $c1 $c2
+> @concl canEnter Person
+> @rule Implies $cond $concl
+> ```
+>
+> This reference-based composition ensures each sub-expression has a name in scope and can be inspected/debugged independently.
+
 ---
 
 ## 2.3 Abstraction Levels and Naming Convention
@@ -178,13 +197,13 @@ A theory creates **two things**:
 1. A **vector** (semantic identity of the theory)
 2. A **namespace** (atoms and macros)
 
-**Syntax:** `@Name theory <geometry> <init>`
+**Primary Syntax:** `@Name theory <geometry> <init> ... end`
 
 ```
 @Economics theory 32768 deterministic
     @Money __Atom
     @Bank __Atom
-    
+
     @SellMacro:sell macro seller buyer item price
         @t1 _atrans $seller $item $seller $buyer
         @t2 _atrans $buyer $price $buyer $seller
@@ -193,6 +212,38 @@ A theory creates **two things**:
     end
 end
 ```
+
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `<geometry>` | 1024, 2048, 8192, 32768, 65536 | Vector dimension (must be divisible by 32) |
+| `<init>` | `deterministic`, `random` | How to initialize the theory vector |
+
+**Alternative Syntaxes (use session's default geometry):**
+
+Brace form (recommended for quick prototyping):
+```
+theory Economics {
+    @Money __Atom
+    @Bank __Atom
+}
+```
+
+Begin/end form:
+```
+theory Physics begin
+    @Energy __Atom
+    @Mass __Atom
+end
+```
+
+Legacy bracket form (deprecated):
+```
+theory Math [
+    @Number __Atom
+]
+```
+
+> All alternative forms use the session's default geometry (configurable via `SYS2_GEOMETRY` environment variable) and deterministic initialization.
 
 **The theory vector `$Economics`** can be used like any other:
 ```
@@ -325,9 +376,25 @@ macro_def    = "@" , ident , [ ":" , ident ] , "macro" , { ident } , NL ,
                "return" , "$" , ident , NL ,
                "end" , NL ;
 
-theory_block = "@" , ident , "theory" , number , init_type , NL ,
-               { statement | macro_def } ,
-               "end" , NL ;
+(* Primary theory syntax - explicit geometry and init type *)
+theory_primary = "@" , ident , "theory" , number , init_type , NL ,
+                 { statement | macro_def } ,
+                 "end" , NL ;
+
+(* Alternative theory syntaxes - use session default geometry *)
+theory_brace   = "theory" , ident , "{" , NL ,
+                 { statement | macro_def } ,
+                 "}" , NL ;
+
+theory_begin   = "theory" , ident , "begin" , NL ,
+                 { statement | macro_def } ,
+                 "end" , NL ;
+
+theory_bracket = "theory" , ident , "[" , NL ,        (* deprecated *)
+                 { statement | macro_def } ,
+                 "]" , NL ;
+
+theory_block   = theory_primary | theory_brace | theory_begin | theory_bracket ;
 
 init_type    = "random" | "deterministic" ;
 

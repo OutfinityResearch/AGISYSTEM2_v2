@@ -138,6 +138,37 @@ RETURN 1 - (differentBits / geometry)
 }
 ```
 
+## KB Serialization
+
+### serializeKB(facts)
+
+Serialize a knowledge base for persistence.
+
+```javascript
+const serialized = serializeKB([
+  { vector: v1, name: 'fact1', metadata: { operator: 'isA' } },
+  { vector: v2, name: 'fact2', metadata: { operator: 'has' } }
+]);
+
+// Result:
+// {
+//   strategyId: 'dense-binary',
+//   version: 1,
+//   geometry: 32768,
+//   count: 2,
+//   facts: [{ data: [...], name: 'fact1', metadata: {...} }, ...]
+// }
+```
+
+### deserializeKB(serialized)
+
+Deserialize a knowledge base from storage.
+
+```javascript
+const facts = deserializeKB(serialized);
+// Returns: Array<{vector, name, metadata}>
+```
+
 ## Performance Characteristics
 
 | Operation | Complexity | Notes |
@@ -146,6 +177,8 @@ RETURN 1 - (differentBits / geometry)
 | similarity | O(n/32) | XOR + popcount per word |
 | bundle | O(k*n) | k = number of vectors |
 | createFromName | O(n) | Hash + PRNG fill |
+| serializeKB | O(k*n) | k = number of facts |
+| deserializeKB | O(k*n) | k = number of facts |
 
 ## Test Cases
 

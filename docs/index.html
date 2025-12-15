@@ -129,6 +129,41 @@ console.log(proof.method); // "transitive_chain"
 const text = session.generateText('isA', ['Rex', 'Animal']);
 console.log(text); // "Rex is an animal."</code></pre>
 
+  <h2>DSL Syntax Quick Reference</h2>
+  <table class="matrix-table">
+    <tr><th>Form</th><th>In Scope</th><th>In KB</th><th>Use Case</th></tr>
+    <tr>
+      <td><code>operator arg1 arg2</code></td>
+      <td>No</td>
+      <td><strong>Yes</strong></td>
+      <td>Simple facts (anonymous, auto-persisted)</td>
+    </tr>
+    <tr>
+      <td><code>@var operator arg1 arg2</code></td>
+      <td><strong>Yes</strong></td>
+      <td>No</td>
+      <td>Temporary variable (for references)</td>
+    </tr>
+    <tr>
+      <td><code>@var:name operator arg1 arg2</code></td>
+      <td><strong>Yes</strong></td>
+      <td><strong>Yes</strong></td>
+      <td>Named persistent fact</td>
+    </tr>
+  </table>
+
+  <h3>Building Complex Rules</h3>
+  <p><strong>Note:</strong> Parenthesized compound expressions are NOT supported. Complex rules are built by defining parts as separate statements, then referencing them:</p>
+  <pre><code># WRONG (not supported):
+# @rule Implies (And $cond1 $cond2) $conclusion
+
+# CORRECT:
+@cond1 hasState Door Open
+@cond2 isA Door Entrance
+@combined And $cond1 $cond2
+@conclusion canEnter Person Door
+@rule Implies $combined $conclusion</code></pre>
+
   <h2>Environment Variables</h2>
   <table class="matrix-table">
     <tr>
@@ -136,12 +171,12 @@ console.log(text); // "Rex is an animal."</code></pre>
       <td>HDC implementation to use. Default: <code>dense-binary</code></td>
     </tr>
     <tr>
-      <td><code>SYS2_DEBUG</code></td>
-      <td>Enable debug logging. Set to <code>true</code> for verbose output.</td>
+      <td><code>SYS2_GEOMETRY</code></td>
+      <td>Default vector geometry. Default: <code>32768</code> (must be divisible by 32)</td>
     </tr>
     <tr>
-      <td><code>SYS2_SKIP_CORE</code></td>
-      <td>Skip loading Core theories (testing only). Default: <code>false</code></td>
+      <td><code>SYS2_DEBUG</code></td>
+      <td>Enable debug logging. Set to <code>true</code> for verbose output.</td>
     </tr>
   </table>
 

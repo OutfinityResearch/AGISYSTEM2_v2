@@ -71,7 +71,7 @@ export const steps = [
     action: 'query',
     input_nl: 'What symptoms does Patient1 have?',
     input_dsl: '@q hasSymptom Patient1 ?symptom',
-    expected_nl: 'Patient1 hasSymptom Fever'
+    expected_nl: 'Patient1 has fever'  // Both fever and cough returned
   },
 
   // === PHASE 5: Learn doctor abilities ===
@@ -138,7 +138,7 @@ export const steps = [
     action: 'prove',
     input_nl: 'Does District Court appeal to Appeals Court?',
     input_dsl: '@goal appealsTo DistrictCourt AppealsCourt',
-    expected_nl: 'True: DistrictCourt appealsTo AppealsCourt'
+    expected_nl: 'True: DistrictCourt appeals to AppealsCourt'
   },
 
   // === PHASE 10b: Prove DistrictCourt is a Court (2-step transitive) ===
@@ -184,7 +184,7 @@ export const steps = [
     action: 'prove',
     input_nl: 'Is arrest before trial?',
     input_dsl: '@goal before Arrest Trial',
-    expected_nl: 'True: Arrest before Trial'
+    expected_nl: 'True: Arrest is before Trial'
   },
 
   // ============================================================

@@ -86,7 +86,38 @@ export class TextGenerator {
       hasSymptom: (a) => a.length >= 2 ? `${a[0]} has ${a[1].toLowerCase()}.` : `hasSymptom(${a.join(', ')})`,
 
       // Appeals
-      appealsTo: (a) => a.length >= 2 ? `${a[0]} appeals to ${a[1]}.` : `appealsTo(${a.join(', ')})`
+      appealsTo: (a) => a.length >= 2 ? `${a[0]} appeals to ${a[1]}.` : `appealsTo(${a.join(', ')})`,
+
+      // Actions (past tense)
+      did: (a) => {
+        if (a.length >= 4) return `${a[0]} did ${a[1]} to ${a[3]}.`;
+        if (a.length >= 3) return `${a[0]} did ${a[1]} ${a[2]}.`;
+        if (a.length >= 2) return `${a[0]} did ${a[1]}.`;
+        return `did(${a.join(', ')})`;
+      },
+      occurred: (a) => a.length >= 1 ? `${a[0]} occurred.` : `occurred()`,
+
+      // State
+      hasState: (a) => a.length >= 2 ? `${a[0]} is ${a[1]}.` : `hasState(${a.join(', ')})`,
+
+      // Color
+      hasColor: (a) => a.length >= 2 ? `${a[0]} has ${a[1]}.` : `hasColor(${a.join(', ')})`,
+
+      // Size
+      hasSize: (a) => a.length >= 2 ? `${a[0]} is ${a[1].toLowerCase()}.` : `hasSize(${a.join(', ')})`,
+
+      // Causation
+      causes: (a) => a.length >= 2 ? `${a[0]} causes ${a[1]}.` : `causes(${a.join(', ')})`,
+      enables: (a) => a.length >= 2 ? `${a[0]} enables ${a[1]}.` : `enables(${a.join(', ')})`,
+      prevents: (a) => a.length >= 2 ? `${a[0]} prevents ${a[1]}.` : `prevents(${a.join(', ')})`,
+      indirectCause: (a) => a.length >= 2 ? `${a[0]} indirectly causes ${a[1]}.` : `indirectCause(${a.join(', ')})`,
+      wouldPrevent: (a) => a.length >= 2 ? `Preventing ${a[0]} would prevent ${a[1]}.` : `wouldPrevent(${a.join(', ')})`,
+
+      // Eating
+      eats: (a) => a.length >= 2 ? `${a[0]} eats ${a[1].toLowerCase()}.` : `eats(${a.join(', ')})`,
+
+      // Alternatives
+      alternative: (a) => a.length >= 2 ? `${a[0]} is an alternative to ${a[1]}.` : `alternative(${a.join(', ')})`
     };
 
     if (templates[operator]) {

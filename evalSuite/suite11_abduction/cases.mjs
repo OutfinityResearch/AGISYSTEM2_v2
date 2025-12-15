@@ -55,7 +55,7 @@ export const steps = [
     action: 'query',
     input_nl: 'What symptoms does the patient have?',
     input_dsl: '@q hasSymptom Patient ?symptom',
-    expected_nl: 'Patient hasSymptom Fever'
+    expected_nl: 'Patient has fever'  // Both fever and cough are returned, but fever matches
   },
 
   // === PHASE 5: Prove flu suggested ===
@@ -160,7 +160,7 @@ export const steps = [
     action: 'query',
     input_nl: 'What symptoms are known?',
     input_dsl: '@q hasSymptom Patient ?symptom',
-    expected_nl: 'Patient hasSymptom Fever'
+    expected_nl: 'Patient has fever'  // Both fever and cough are returned, but fever matches
   }
 ];
 

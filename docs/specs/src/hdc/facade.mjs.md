@@ -15,13 +15,20 @@ Single entry point for all HDC operations in AGISystem2. All upper layers import
 | `getStrategyId()` | Get active strategy ID |
 | `listStrategies()` | List available strategies |
 
+### Geometry Management
+
+| Function | Description |
+|----------|-------------|
+| `getDefaultGeometry()` | Get the default geometry for vector operations |
+| `setDefaultGeometry(geometry)` | Set the default geometry (must be divisible by 32) |
+
 ### Factory Functions
 
 | Function | Description |
 |----------|-------------|
-| `createZero(geometry)` | Create zero vector |
-| `createRandom(geometry, seed?)` | Create random ~50% density vector |
-| `createFromName(name, geometry)` | Create deterministic vector from name |
+| `createZero(geometry?)` | Create zero vector (uses default geometry if not specified) |
+| `createRandom(geometry?, seed?)` | Create random ~50% density vector (uses default geometry) |
+| `createFromName(name, geometry?)` | Create deterministic vector from name (uses default geometry) |
 | `deserialize(obj)` | Restore vector from storage |
 
 ### Core Operations
@@ -44,6 +51,13 @@ Single entry point for all HDC operations in AGISystem2. All upper layers import
 | `topKSimilar(query, vocabulary, k)` | Find K most similar |
 | `distance(a, b)` | Calculate distance (1 - similarity) |
 | `isOrthogonal(a, b, threshold?)` | Check quasi-orthogonality |
+
+### KB Serialization (Strategy Level)
+
+| Function | Description |
+|----------|-------------|
+| `serializeKB(facts)` | Serialize a knowledge base for persistence |
+| `deserializeKB(serialized)` | Deserialize a knowledge base from storage |
 
 ### Benchmarking
 
@@ -70,10 +84,14 @@ getProperties() → Object
 getStrategyId() → string
 listStrategies() → string[]
 
-// Factory
-createZero(geometry: number) → SemanticVector
-createRandom(geometry: number, seed?: number) → SemanticVector
-createFromName(name: string, geometry: number) → SemanticVector
+// Geometry Management
+getDefaultGeometry() → number
+setDefaultGeometry(geometry: number) → void  // Must be divisible by 32
+
+// Factory (all use default geometry if not specified)
+createZero(geometry?: number) → SemanticVector
+createRandom(geometry?: number, seed?: number) → SemanticVector
+createFromName(name: string, geometry?: number) → SemanticVector
 deserialize(serialized: Object) → SemanticVector
 
 // Core operations
@@ -102,6 +120,7 @@ printBenchmark(results: BenchmarkResults) → void
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SYS2_HDC_STRATEGY` | `dense-binary` | Strategy to use |
+| `SYS2_GEOMETRY` | `32768` | Default vector geometry (must be divisible by 32) |
 
 ## Dependencies
 

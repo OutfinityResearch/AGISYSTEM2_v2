@@ -154,13 +154,17 @@ export class List extends Expression {
 
 /**
  * Theory block
- * theory Name { statements }
+ * Primary:    @Name theory <geometry> <init> ... end
+ * Alternative: theory Name [ statements ]
  */
 export class TheoryDeclaration extends ASTNode {
-  constructor(name, statements, line, column) {
+  constructor(name, statements, line, column, options = {}) {
     super('TheoryDeclaration', line, column);
     this.name = name;
     this.statements = statements;
+    this.geometry = options.geometry || null;      // number or null (use default)
+    this.initType = options.initType || 'deterministic'; // 'deterministic' | 'random'
+    this.useBracketSyntax = options.useBracketSyntax || false; // true if [ ] form was used
   }
 }
 

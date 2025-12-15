@@ -7,9 +7,8 @@
  */
 
 import { Vector } from '../core/vector.mjs';
-import { bind, bundle, similarity, topKSimilar, bindAll } from '../core/operations.mjs';
+import { bind, bundle, similarity, topKSimilar, bindAll, getDefaultGeometry } from '../core/operations.mjs';
 import { withPosition, removePosition } from '../core/position.mjs';
-import { DEFAULT_GEOMETRY } from '../core/constants.mjs';
 import { parse } from '../parser/parser.mjs';
 import { Scope } from './scope.mjs';
 import { Vocabulary } from './vocabulary.mjs';
@@ -34,7 +33,7 @@ const MUTUALLY_EXCLUSIVE = {
 
 export class Session {
   constructor(options = {}) {
-    this.geometry = options.geometry || DEFAULT_GEOMETRY;
+    this.geometry = options.geometry || getDefaultGeometry();
     this.scope = new Scope();
     this.vocabulary = new Vocabulary(this.geometry);
     this.executor = new Executor(this);
@@ -123,16 +122,70 @@ export class Session {
         const concVec = this.executor.resolveExpression(stmt.args[1]);
         const conditionParts = this.extractCompoundCondition(stmt.args[0], stmtMap);
 
+        // Resolve AST for condition and conclusion for variable unification
+        const conditionAST = this.resolveReferenceToAST(stmt.args[0], stmtMap);
+        const conclusionAST = this.resolveReferenceToAST(stmt.args[1], stmtMap);
+
+        // Extract variables from condition and conclusion
+        const conditionVars = this.extractVariables(conditionAST);
+        const conclusionVars = this.extractVariables(conclusionAST);
+        const hasVariables = conditionVars.length > 0 || conclusionVars.length > 0;
+
         this.rules.push({
           name: stmt.destination,
           vector: this.executor.buildStatementVector(stmt),
           source: stmt.toString(),
           condition: condVec,
           conclusion: concVec,
-          conditionParts
+          conditionParts,
+          // New: AST for unification
+          conditionAST,
+          conclusionAST,
+          conditionVars,
+          conclusionVars,
+          hasVariables
         });
       }
     }
+  }
+
+  /**
+   * Resolve reference to its actual AST statement
+   */
+  resolveReferenceToAST(expr, stmtMap) {
+    if (expr.type === 'Reference') {
+      const stmt = stmtMap.get(expr.name);
+      if (stmt) {
+        return stmt;
+      }
+    }
+    return expr;
+  }
+
+  /**
+   * Extract variable names from AST
+   */
+  extractVariables(ast, vars = []) {
+    if (!ast) return vars;
+
+    if (ast.type === 'Hole') {
+      if (!vars.includes(ast.name)) {
+        vars.push(ast.name);
+      }
+    } else if (ast.type === 'Statement') {
+      if (ast.operator) this.extractVariables(ast.operator, vars);
+      if (ast.args) {
+        for (const arg of ast.args) {
+          this.extractVariables(arg, vars);
+        }
+      }
+    } else if (ast.args) {
+      for (const arg of ast.args) {
+        this.extractVariables(arg, vars);
+      }
+    }
+
+    return vars;
   }
 
   /**
@@ -145,6 +198,7 @@ export class Session {
 
   /**
    * Recursively extract compound condition (And/Or)
+   * Preserves AST for variable unification
    */
   extractCompoundCondition(expr, stmtMap) {
     if (expr.type === 'Reference') {
@@ -155,7 +209,13 @@ export class Session {
           const parts = stmt.args.map(arg => {
             const nested = this.extractCompoundCondition(arg, stmtMap);
             if (nested) return nested;
-            return { type: 'leaf', vector: this.executor.resolveExpression(arg) };
+            // Resolve the reference to get the actual AST
+            const resolvedAST = this.resolveReferenceToAST(arg, stmtMap);
+            return {
+              type: 'leaf',
+              vector: this.executor.resolveExpression(arg),
+              ast: resolvedAST  // Preserve AST for unification
+            };
           });
           return { type: op, parts };
         }

@@ -31,14 +31,9 @@ const DEFAULT_STEP_BUDGET = 1000;
 
 /**
  * Load Core Theories
- * Set SYS2_SKIP_CORE=true to skip loading (for debugging)
+ * Core theories are essential for proper reasoning and always loaded.
  */
 function loadCoreTheories(session) {
-  if (process.env.SYS2_SKIP_CORE === 'true') {
-    console.log('[Runner] Skipping Core Theories (SYS2_SKIP_CORE=true)');
-    return;
-  }
-
   console.log('[Runner] Loading Core Theories...');
   const corePath = path.join(PROJECT_ROOT, 'config', 'Core');
   if (!fs.existsSync(corePath)) return;

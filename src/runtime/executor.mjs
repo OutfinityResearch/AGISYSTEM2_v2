@@ -117,16 +117,18 @@ export class Executor {
       throw new ExecutionError(`Unknown macro: ${macroName}`);
     }
 
-    // Create a new scope for macro execution with parameter bindings
-    const savedScope = new Map(this.session.scope);
+    // Create a child scope for macro execution
+    const parentScope = this.session.scope;
+    const macroScope = parentScope.child();
+    this.session.scope = macroScope;
 
     try {
-      // Bind arguments to parameters
+      // Bind arguments to parameters in macro scope
       for (let i = 0; i < macro.params.length; i++) {
         const paramName = macro.params[i];
         const argVec = i < args.length ? this.resolveExpression(args[i]) : null;
         if (argVec) {
-          this.session.scope.set(paramName, argVec);
+          macroScope.set(paramName, argVec);
         }
       }
 
@@ -140,11 +142,11 @@ export class Executor {
         return this.resolveExpression(macro.returnExpr);
       }
 
-      // Return last defined variable in macro scope, or null
+      // Return null if no return expression
       return null;
     } finally {
-      // Restore original scope
-      this.session.scope = savedScope;
+      // Restore parent scope
+      this.session.scope = parentScope;
     }
   }
 
@@ -172,8 +174,23 @@ export class Executor {
       return this.executeUnload(stmt);
     }
 
-    // Build the vector for this statement
-    const vector = this.buildStatementVector(stmt);
+    // Check if operator is a macro - if so, expand it
+    let vector;
+    if (this.session.macros?.has(operatorName)) {
+      // Macro invocation: execute macro then bind with operator
+      const macroResult = this.expandMacro(operatorName, stmt.args);
+      if (macroResult) {
+        // Bind operator with macro result (per spec DS02 section 2.5)
+        const operatorVec = this.resolveExpression(stmt.operator);
+        vector = bind(operatorVec, macroResult);
+      } else {
+        // Macro returned nothing - just use operator
+        vector = this.resolveExpression(stmt.operator);
+      }
+    } else {
+      // Normal statement: build vector directly
+      vector = this.buildStatementVector(stmt);
+    }
 
     // If there's a destination, store it in scope
     if (stmt.destination) {

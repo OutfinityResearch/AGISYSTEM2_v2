@@ -78,10 +78,26 @@ export class Parser {
   parseTopLevel() {
     const token = this.peek();
 
+    // Check for primary theory syntax: @Name theory <geometry> <init> ... end
+    if (token.type === TOKEN_TYPES.AT) {
+      // Look ahead to see if next token after identifier is 'theory' keyword
+      const savedPos = this.pos;
+      this.advance(); // consume @name
+
+      if (this.check(TOKEN_TYPES.KEYWORD) && this.peek().value === 'theory') {
+        // This is the primary theory syntax
+        this.pos = savedPos; // rewind
+        return this.parseTheoryPrimary();
+      }
+
+      // Not a theory, rewind and parse as normal statement
+      this.pos = savedPos;
+    }
+
     if (token.type === TOKEN_TYPES.KEYWORD) {
       switch (token.value) {
         case 'theory':
-          return this.parseTheory();
+          return this.parseTheoryBracket(); // Alternative bracket syntax
         case 'import':
           return this.parseImport();
         case 'rule':
@@ -93,22 +109,122 @@ export class Parser {
   }
 
   /**
-   * Parse theory declaration
-   * theory Name { statements }
+   * Parse theory declaration - PRIMARY syntax
+   * @Name theory <geometry> <init> ... end
    */
-  parseTheory() {
-    const startToken = this.expect(TOKEN_TYPES.KEYWORD, 'theory');
-    const name = this.expect(TOKEN_TYPES.IDENTIFIER).value;
-    this.expect(TOKEN_TYPES.LBRACKET); // Using [ for block start
+  parseTheoryPrimary() {
+    const atToken = this.expect(TOKEN_TYPES.AT);
+    const name = atToken.value.split(':')[0]; // Handle @name:persist format
+    const startLine = atToken.line;
+    const startColumn = atToken.column;
 
-    const statements = [];
-    while (!this.check(TOKEN_TYPES.RBRACKET) && !this.isEof()) {
-      const stmt = this.parseStatement();
-      if (stmt) statements.push(stmt);
+    this.expect(TOKEN_TYPES.KEYWORD, 'theory');
+
+    // Parse geometry (required)
+    const geometryToken = this.expect(TOKEN_TYPES.NUMBER);
+    const geometry = geometryToken.value;
+
+    // Parse init type (required): deterministic or random
+    const initToken = this.expect(TOKEN_TYPES.IDENTIFIER);
+    const initType = initToken.value;
+    if (initType !== 'deterministic' && initType !== 'random') {
+      throw new ParseError(`Expected 'deterministic' or 'random', got '${initType}'`, initToken);
     }
 
-    this.expect(TOKEN_TYPES.RBRACKET);
-    return new TheoryDeclaration(name, statements, startToken.line, startToken.column);
+    this.skipNewlines();
+
+    // Parse body until 'end' keyword
+    const statements = [];
+    while (!this.isEof()) {
+      if (this.check(TOKEN_TYPES.KEYWORD) && this.peek().value === 'end') {
+        this.advance(); // consume 'end'
+        break;
+      }
+      this.skipNewlines();
+      if (this.check(TOKEN_TYPES.KEYWORD) && this.peek().value === 'end') {
+        this.advance();
+        break;
+      }
+      const stmt = this.parseStatement();
+      if (stmt) statements.push(stmt);
+      this.skipNewlines();
+    }
+
+    return new TheoryDeclaration(name, statements, startLine, startColumn, {
+      geometry,
+      initType,
+      useBracketSyntax: false
+    });
+  }
+
+  /**
+   * Parse theory declaration - ALTERNATIVE syntax (bracket or begin/end)
+   * theory Name { statements }
+   * theory Name begin statements end
+   */
+  parseTheoryBracket() {
+    const startToken = this.expect(TOKEN_TYPES.KEYWORD, 'theory');
+    const name = this.expect(TOKEN_TYPES.IDENTIFIER).value;
+
+    // Determine block style: { }, begin/end, or [ ] (legacy)
+    let useBraces = false;
+    let useBeginEnd = false;
+    let useBrackets = false;
+
+    if (this.check(TOKEN_TYPES.LBRACE)) {
+      this.advance(); // consume {
+      useBraces = true;
+    } else if (this.check(TOKEN_TYPES.KEYWORD) && this.peek().value === 'begin') {
+      this.advance(); // consume 'begin'
+      useBeginEnd = true;
+    } else if (this.check(TOKEN_TYPES.LBRACKET)) {
+      this.advance(); // consume [
+      useBrackets = true;
+    } else {
+      throw new ParseError("Expected '{', 'begin', or '[' after theory name", this.peek());
+    }
+
+    this.skipNewlines();
+
+    const statements = [];
+
+    if (useBraces) {
+      while (!this.check(TOKEN_TYPES.RBRACE) && !this.isEof()) {
+        this.skipNewlines();
+        if (this.check(TOKEN_TYPES.RBRACE)) break;
+        const stmt = this.parseStatement();
+        if (stmt) statements.push(stmt);
+        this.skipNewlines();
+      }
+      this.expect(TOKEN_TYPES.RBRACE);
+    } else if (useBeginEnd) {
+      while (!this.isEof()) {
+        this.skipNewlines();
+        if (this.check(TOKEN_TYPES.KEYWORD) && this.peek().value === 'end') {
+          this.advance(); // consume 'end'
+          break;
+        }
+        const stmt = this.parseStatement();
+        if (stmt) statements.push(stmt);
+        this.skipNewlines();
+      }
+    } else {
+      // Legacy bracket syntax
+      while (!this.check(TOKEN_TYPES.RBRACKET) && !this.isEof()) {
+        this.skipNewlines();
+        if (this.check(TOKEN_TYPES.RBRACKET)) break;
+        const stmt = this.parseStatement();
+        if (stmt) statements.push(stmt);
+        this.skipNewlines();
+      }
+      this.expect(TOKEN_TYPES.RBRACKET);
+    }
+
+    return new TheoryDeclaration(name, statements, startToken.line, startToken.column, {
+      geometry: null, // Uses session default
+      initType: 'deterministic',
+      useBracketSyntax: true
+    });
   }
 
   /**

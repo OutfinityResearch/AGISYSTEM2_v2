@@ -109,8 +109,8 @@ src/hdc/
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SYS2_HDC_STRATEGY` | `dense-binary` | Active HDC implementation |
+| `SYS2_GEOMETRY` | `32768` | Default vector geometry (divisible by 32) |
 | `SYS2_DEBUG` | `false` | Enable debug logging |
-| `SYS2_SKIP_CORE` | `false` | Skip Core theories (testing) |
 
 ---
 

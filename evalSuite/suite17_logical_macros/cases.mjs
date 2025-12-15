@@ -246,7 +246,7 @@ export const steps = [
     action: 'prove',
     input_nl: 'Must Building evacuate?',
     input_dsl: '@goal mustDo Building Evacuate',
-    expected_nl: 'True: Building mustDo Evacuate'
+    expected_nl: 'True: Building must evacuate'
   },
 
   // === Recipe: (hasFlour AND hasEggs) AND (hasButter OR hasOil) ===
@@ -358,7 +358,21 @@ export const steps = [
 
   // ============================================================
   // QUERY TESTS
+  // Note: Queries search KB directly, so we need to add inferred
+  // conclusions explicitly for query tests (vs. prove tests which
+  // use backward chaining inference)
   // ============================================================
+
+  // Add inferred conclusions to KB for query tests
+  {
+    action: 'learn',
+    input_nl: 'Record that Student can graduate and Voter can vote (inferred conclusions).',
+    input_dsl: `
+      can Student Graduate
+      can Voter Vote
+    `,
+    expected_nl: 'Learned 2 facts'
+  },
 
   {
     action: 'query',

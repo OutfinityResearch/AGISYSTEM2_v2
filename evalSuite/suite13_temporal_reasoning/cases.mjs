@@ -50,7 +50,7 @@ export const steps = [
     action: 'prove',
     input_nl: 'Was WW1 before TreatyOfVersailles?',
     input_dsl: '@goal before WW1 TreatyOfVersailles',
-    expected_nl: 'True: WW1 before TreatyOfVersailles'
+    expected_nl: 'True: WW1 is before TreatyOfVersailles'
   },
 
   // === PHASE 3: Direct after ===
@@ -58,7 +58,7 @@ export const steps = [
     action: 'prove',
     input_nl: 'Was WW2 after TreatyOfVersailles?',
     input_dsl: '@goal after WW2 TreatyOfVersailles',
-    expected_nl: 'True: WW2 after TreatyOfVersailles'
+    expected_nl: 'True: WW2 is after TreatyOfVersailles'
   },
 
   // === PHASE 4: Query what was before ===
@@ -66,7 +66,7 @@ export const steps = [
     action: 'query',
     input_nl: 'What was before TreatyOfVersailles?',
     input_dsl: '@q before ?event TreatyOfVersailles',
-    expected_nl: 'WW1 before TreatyOfVersailles'
+    expected_nl: 'WW1 is before TreatyOfVersailles'
   },
 
   // === PHASE 4b: Prove WW1 is a War (2-step transitive) ===
@@ -122,7 +122,7 @@ export const steps = [
     action: 'prove',
     input_nl: 'Is WakeUp before Breakfast?',
     input_dsl: '@goal before WakeUp Breakfast',
-    expected_nl: 'True: WakeUp before Breakfast'
+    expected_nl: 'True: WakeUp is before Breakfast'
   },
 
   // === PHASE 7: Negative - not direct ===
@@ -130,7 +130,7 @@ export const steps = [
     action: 'prove',
     input_nl: 'Is WakeUp before Dinner directly?',
     input_dsl: '@goal before WakeUp Dinner',
-    expected_nl: 'Cannot prove: WakeUp before Dinner'
+    expected_nl: 'Cannot prove: WakeUp is before Dinner'
   },
 
   // === PHASE 8: Learn during relations ===

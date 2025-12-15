@@ -24,6 +24,40 @@ import { getStrategy, getDefaultStrategy, listStrategies } from './strategies/in
  */
 const ENV_STRATEGY = process.env.SYS2_HDC_STRATEGY || 'dense-binary';
 
+/**
+ * Environment variable for default geometry
+ * Set SYS2_GEOMETRY=32768 (or other valid geometry)
+ * Default: 32768
+ */
+const ENV_GEOMETRY = parseInt(process.env.SYS2_GEOMETRY) || 32768;
+
+// ============================================================================
+// GEOMETRY MANAGEMENT (Strategy Level)
+// ============================================================================
+
+let defaultGeometry = ENV_GEOMETRY;
+
+/**
+ * Get the default geometry for vector operations.
+ * Upper layers should use this instead of storing geometry directly.
+ * @returns {number} Default geometry
+ */
+export function getDefaultGeometry() {
+  return defaultGeometry;
+}
+
+/**
+ * Set the default geometry for vector operations.
+ * Should be called before creating sessions.
+ * @param {number} geometry - New default geometry (must be divisible by 32)
+ */
+export function setDefaultGeometry(geometry) {
+  if (geometry % 32 !== 0) {
+    throw new Error(`Geometry must be divisible by 32, got ${geometry}`);
+  }
+  defaultGeometry = geometry;
+}
+
 // ============================================================================
 // ACTIVE STRATEGY MANAGEMENT
 // ============================================================================
@@ -80,20 +114,20 @@ export { listStrategies };
 
 /**
  * Create zero vector
- * @param {number} geometry
+ * @param {number} [geometry] - Optional geometry (uses default if not specified)
  * @returns {Object} SemanticVector
  */
-export function createZero(geometry) {
+export function createZero(geometry = defaultGeometry) {
   return getActiveStrategy().createZero(geometry);
 }
 
 /**
  * Create random vector with ~50% density
- * @param {number} geometry
+ * @param {number} [geometry] - Optional geometry (uses default if not specified)
  * @param {number} [seed] - Optional seed
  * @returns {Object} SemanticVector
  */
-export function createRandom(geometry, seed = null) {
+export function createRandom(geometry = defaultGeometry, seed = null) {
   return getActiveStrategy().createRandom(geometry, seed);
 }
 
@@ -101,10 +135,10 @@ export function createRandom(geometry, seed = null) {
  * Create deterministic vector from name
  * Same (name, geometry) always produces same vector.
  * @param {string} name - Identifier
- * @param {number} geometry
+ * @param {number} [geometry] - Optional geometry (uses default if not specified)
  * @returns {Object} SemanticVector
  */
-export function createFromName(name, geometry) {
+export function createFromName(name, geometry = defaultGeometry) {
   return getActiveStrategy().createFromName(name, geometry);
 }
 
@@ -242,6 +276,34 @@ export function distance(a, b) {
  */
 export function isOrthogonal(a, b, threshold = 0.55) {
   return getActiveStrategy().isOrthogonal(a, b, threshold);
+}
+
+// ============================================================================
+// KB SERIALIZATION (Strategy Level)
+// ============================================================================
+
+/**
+ * Serialize a knowledge base for persistence.
+ * Uses strategy-level serialization for optimal storage.
+ *
+ * @param {Array<{vector: Object, name?: string, metadata?: Object}>} facts
+ * @returns {Object} Serialized KB
+ */
+export function serializeKB(facts) {
+  return getActiveStrategy().serializeKB(facts);
+}
+
+/**
+ * Deserialize a knowledge base from storage.
+ * Automatically selects the correct strategy based on serialized data.
+ *
+ * @param {Object} serialized - Serialized KB object
+ * @returns {Array<{vector: Object, name?: string, metadata?: Object}>}
+ */
+export function deserializeKB(serialized) {
+  const strategyId = serialized.strategyId || 'dense-binary';
+  const strategy = getStrategy(strategyId);
+  return strategy.deserializeKB(serialized);
 }
 
 // ============================================================================
@@ -429,6 +491,10 @@ export default {
   getStrategyId,
   listStrategies,
 
+  // Geometry management
+  getDefaultGeometry,
+  setDefaultGeometry,
+
   // Factory
   createZero,
   createRandom,
@@ -449,6 +515,10 @@ export default {
   topKSimilar,
   distance,
   isOrthogonal,
+
+  // KB Serialization
+  serializeKB,
+  deserializeKB,
 
   // Benchmark
   benchmarkStrategy,

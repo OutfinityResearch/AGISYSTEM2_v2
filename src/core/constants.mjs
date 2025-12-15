@@ -48,6 +48,8 @@ export const TOKEN_TYPES = {
   RPAREN: 'RPAREN',
   LBRACKET: 'LBRACKET',
   RBRACKET: 'RBRACKET',
+  LBRACE: 'LBRACE',
+  RBRACE: 'RBRACE',
   COMMA: 'COMMA',
   COLON: 'COLON',
   NEWLINE: 'NEWLINE',
@@ -62,6 +64,7 @@ export const KEYWORDS = [
   'import',
   'rule',
   'macro',
+  'begin',
   'end',
   'return'
 ];

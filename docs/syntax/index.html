@@ -365,10 +365,15 @@ end
     @parent:parent __Relation
     @sibling:sibling __Relation
 
-    # Rule: siblings share parent
-    @siblingRule Implies
-        (And (parent ?p ?x) (parent ?p ?y) (Not (equals ?x ?y)))
-        (sibling ?x ?y)
+    # Rule: siblings share parent (using reference-based composition)
+    # Note: Parenthesized expressions are NOT supported.
+    # Complex rules are built by defining parts as separate statements.
+    @p1 parent ?p ?x
+    @p2 parent ?p ?y
+    @notSame Not equals ?x ?y
+    @siblingCond And $p1 $p2 $notSame
+    @siblingConc sibling ?x ?y
+    @siblingRule Implies $siblingCond $siblingConc
 
 end
 

@@ -125,6 +125,10 @@ export class Lexer {
         return this.singleChar(TOKEN_TYPES.LBRACKET);
       case ']':
         return this.singleChar(TOKEN_TYPES.RBRACKET);
+      case '{':
+        return this.singleChar(TOKEN_TYPES.LBRACE);
+      case '}':
+        return this.singleChar(TOKEN_TYPES.RBRACE);
       case ',':
         return this.singleChar(TOKEN_TYPES.COMMA);
       case ':':

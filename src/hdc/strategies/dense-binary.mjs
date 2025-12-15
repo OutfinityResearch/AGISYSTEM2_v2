@@ -509,6 +509,70 @@ function isOrthogonal(a, b, threshold = 0.55) {
 }
 
 // ============================================================================
+// KB SERIALIZATION (Strategy-level optimization)
+// ============================================================================
+
+/**
+ * Serialize a knowledge base (collection of facts) for persistence.
+ * Strategy-level serialization enables optimizations like:
+ * - Shared geometry header
+ * - Compressed data formats
+ * - Batch operations
+ *
+ * @param {Array<{vector: DenseBinaryVector, name?: string, metadata?: Object}>} facts
+ * @returns {Object} Serialized KB
+ */
+function serializeKB(facts) {
+  if (!facts || facts.length === 0) {
+    return {
+      strategyId: 'dense-binary',
+      version: 1,
+      geometry: 0,
+      count: 0,
+      facts: []
+    };
+  }
+
+  const geometry = facts[0].vector.geometry;
+
+  return {
+    strategyId: 'dense-binary',
+    version: 1,
+    geometry,
+    count: facts.length,
+    facts: facts.map(f => ({
+      data: Array.from(f.vector.data),
+      name: f.name || null,
+      metadata: f.metadata || null
+    }))
+  };
+}
+
+/**
+ * Deserialize a knowledge base from storage.
+ *
+ * @param {Object} serialized - Serialized KB object
+ * @returns {Array<{vector: DenseBinaryVector, name?: string, metadata?: Object}>}
+ */
+function deserializeKB(serialized) {
+  if (!serialized || !serialized.facts || serialized.count === 0) {
+    return [];
+  }
+
+  const geometry = serialized.geometry;
+
+  return serialized.facts.map(f => ({
+    vector: deserialize({
+      strategyId: serialized.strategyId,
+      geometry,
+      data: f.data
+    }),
+    name: f.name,
+    metadata: f.metadata
+  }));
+}
+
+// ============================================================================
 // STRATEGY EXPORT
 // ============================================================================
 
@@ -540,6 +604,10 @@ export const denseBinaryStrategy = {
   topKSimilar,
   distance,
   isOrthogonal,
+
+  // KB Serialization (strategy-level)
+  serializeKB,
+  deserializeKB,
 
   // Internal class (for backward compat and advanced use)
   Vector: DenseBinaryVector

@@ -17,7 +17,9 @@ import {
   distance as hdcDistance,
   topKSimilar as hdcTopKSimilar,
   isOrthogonal as hdcIsOrthogonal,
-  unbind as hdcUnbind
+  unbind as hdcUnbind,
+  getDefaultGeometry as hdcGetDefaultGeometry,
+  setDefaultGeometry as hdcSetDefaultGeometry
 } from '../hdc/facade.mjs';
 
 // Re-export all operations
@@ -29,6 +31,8 @@ export const distance = hdcDistance;
 export const topKSimilar = hdcTopKSimilar;
 export const isOrthogonal = hdcIsOrthogonal;
 export const unbind = hdcUnbind;
+export const getDefaultGeometry = hdcGetDefaultGeometry;
+export const setDefaultGeometry = hdcSetDefaultGeometry;
 
 export default {
   bind,
@@ -38,5 +42,7 @@ export default {
   distance,
   topKSimilar,
   isOrthogonal,
-  unbind
+  unbind,
+  getDefaultGeometry,
+  setDefaultGeometry
 };
