@@ -1,218 +1,148 @@
 /**
  * Suite 02 - Family Relations and Ownership
  *
- * A conversation about family, ownership, and social relationships.
- * Tests: learn relationships → query/prove → transfer verbs (give, sell)
+ * Tests multi-step reasoning with family hierarchies and rule chains.
+ * All prove actions require 3-6 reasoning steps.
  *
- * Core theories: 09-roles, 11-bootstrap-verbs
+ * REASONING DEPTHS:
+ * - Minimum proof steps: 3
+ * - Maximum proof steps: 6
+ * - Uses rule chains for relationship inference
  */
 
 export const name = 'Family Relations and Ownership';
-export const description = 'Learn family trees, ownership, and social relations progressively';
+export const description = 'Multi-step family reasoning with rule chains';
 
 export const theories = [
-  '09-roles.sys2',
-  '11-bootstrap-verbs.sys2'
+  '05-logic.sys2',
+  '09-roles.sys2'
 ];
 
 export const steps = [
-  // === PHASE 1: Learn family structure ===
+  // === PHASE 1: Build 5-level family role hierarchy ===
+  // Being -> Person -> Adult -> Parent -> Father/Mother
   {
     action: 'learn',
-    input_nl: `John is a father. Mary is a mother. Alice is a daughter.
-               Bob is a son. Sarah is a grandmother.`,
+    input_nl: 'Build family role hierarchy: Being > Person > Adult > Parent > Father',
     input_dsl: `
-      @f1 isA John Father
-      @f2 isA Mary Mother
-      @f3 isA Alice Daughter
-      @f4 isA Bob Son
-      @f5 isA Sarah Grandmother
+      isA Person Being
+      isA Adult Person
+      isA Parent Adult
+      isA Father Parent
+      isA Mother Parent
+      isA Child Person
     `,
-    expected_nl: 'Learned 5 facts'
+    expected_nl: 'Learned 6 facts'
   },
 
-  // === PHASE 2: Learn love relationships ===
+  // === PHASE 2: Add instances and rule chains ===
   {
     action: 'learn',
-    input_nl: `John loves Mary. Mary loves John. John loves Alice.
-               Mary loves Alice. Alice loves her parents.`,
+    input_nl: 'John is a father. If John is a father, John protects family. If John protects family, family trusts John.',
     input_dsl: `
-      @l1 love John Mary
-      @l2 love Mary John
-      @l3 love John Alice
-      @l4 love Mary Alice
-      @l5 love Alice Parents
+      isA John Father
+      @protCond isA John Father
+      @protConc protects John Family
+      @protRule Implies $protCond $protConc
+      @trustCond protects John Family
+      @trustConc trusts Family John
+      @trustRule Implies $trustCond $trustConc
     `,
-    expected_nl: 'Learned 5 facts'
+    expected_nl: 'Learned 7 facts'
   },
 
-  // === PHASE 3: Query love relationship ===
-  {
-    action: 'query',
-    input_nl: 'Who does John love?',
-    input_dsl: '@q love John ?who',
-    expected_nl: 'John loves Mary'
-  },
-
-  // === PHASE 4: Prove love ===
+  // === PHASE 3: Prove 3-step hierarchy ===
+  // CHAIN: John -> Father -> Parent -> Adult (3 hops)
   {
     action: 'prove',
-    input_nl: 'Does Mary love John?',
-    input_dsl: '@goal love Mary John',
-    expected_nl: 'Yes, Mary loves John'
+    input_nl: 'Is John an adult?',
+    input_dsl: '@goal isA John Adult',
+    expected_nl: 'True: John is an adult. Proof: John is a father. Father is a parent. Parent is an adult.'
   },
 
-  // === PHASE 5: Learn ownership ===
-  {
-    action: 'learn',
-    input_nl: `John has a car. John has a house. John has a dog named Rex.
-               Mary has a cat. Alice has a bicycle.`,
-    input_dsl: `
-      @o1 has John Car
-      @o2 has John House
-      @o3 has John Rex
-      @o4 has Mary Cat
-      @o5 has Alice Bicycle
-    `,
-    expected_nl: 'Learned 5 facts'
-  },
-
-  // === PHASE 6: Query ownership ===
-  {
-    action: 'query',
-    input_nl: 'What does John have?',
-    input_dsl: '@q has John ?item',
-    expected_nl: 'John has a car'
-  },
-
-  // === PHASE 7: Prove ownership ===
+  // === PHASE 4: Prove 4-step hierarchy ===
+  // CHAIN: John -> Father -> Parent -> Adult -> Person (4 hops)
   {
     action: 'prove',
-    input_nl: 'Does John have a car?',
-    input_dsl: '@goal has John Car',
-    expected_nl: 'Yes, John has a car'
+    input_nl: 'Is John a person?',
+    input_dsl: '@goal isA John Person',
+    expected_nl: 'True: John is a person. Proof: John is a father. Father is a parent. Parent is an adult. Adult is a person.'
   },
 
-  // === PHASE 8: Learn give transactions ===
-  {
-    action: 'learn',
-    input_nl: `Alice gave Bob a book. Bob gave Charlie a pen.
-               Charlie gave David a gift. Mary gave Alice flowers.`,
-    input_dsl: `
-      @g1 give Alice Bob Book
-      @g2 give Bob Charlie Pen
-      @g3 give Charlie David Gift
-      @g4 give Mary Alice Flowers
-    `,
-    expected_nl: 'Learned 4 facts'
-  },
-
-  // === PHASE 9: Query give ===
-  {
-    action: 'query',
-    input_nl: 'What did Alice give Bob?',
-    input_dsl: '@q give Alice Bob ?what',
-    expected_nl: 'Alice gave Bob a book'
-  },
-
-  // === PHASE 10: Learn sell transactions ===
-  {
-    action: 'learn',
-    input_nl: `John sells cars. Mary sells houses. Bob sells books.
-               The shop sells food. The market sells vegetables.`,
-    input_dsl: `
-      @s1 sell John Cars
-      @s2 sell Mary Houses
-      @s3 sell Bob Books
-      @s4 sell Shop Food
-      @s5 sell Market Vegetables
-    `,
-    expected_nl: 'Learned 5 facts'
-  },
-
-  // === PHASE 11: Query sell ===
-  {
-    action: 'query',
-    input_nl: 'What does John sell?',
-    input_dsl: '@q sell John ?what',
-    expected_nl: 'John sells cars'
-  },
-
-  // === PHASE 12: Learn knowledge relationships ===
-  {
-    action: 'learn',
-    input_nl: `Alice knows Bob. Bob knows Charlie. Charlie knows David.
-               David knows Eve. Everyone knows each other in the group.`,
-    input_dsl: `
-      @k1 know Alice Bob
-      @k2 know Bob Charlie
-      @k3 know Charlie David
-      @k4 know David Eve
-      @k5 know Group Everyone
-    `,
-    expected_nl: 'Learned 5 facts'
-  },
-
-  // === PHASE 13: Query knowledge ===
-  {
-    action: 'query',
-    input_nl: 'Who does Alice know?',
-    input_dsl: '@q know Alice ?who',
-    expected_nl: 'Alice knows Bob'
-  },
-
-  // === PHASE 14: Learn help relationships ===
-  {
-    action: 'learn',
-    input_nl: `John helps Mary. Mary helps Alice. Alice helps Bob.
-               Teachers help students. Parents help children.`,
-    input_dsl: `
-      @h1 help John Mary
-      @h2 help Mary Alice
-      @h3 help Alice Bob
-      @h4 help Teachers Students
-      @h5 help Parents Children
-    `,
-    expected_nl: 'Learned 5 facts'
-  },
-
-  // === PHASE 15: Query help ===
-  {
-    action: 'query',
-    input_nl: 'Who does John help?',
-    input_dsl: '@q help John ?who',
-    expected_nl: 'John helps Mary'
-  },
-
-  // === PHASE 16: Learn perception ===
-  {
-    action: 'learn',
-    input_nl: `John sees the bird. Mary sees the cat. Alice hears music.
-               Bob feels happy. The bird is small.`,
-    input_dsl: `
-      @p1 see John Bird
-      @p2 see Mary Cat
-      @p3 hear Alice Music
-      @p4 feel Bob Happy
-      @p5 hasProperty Bird small
-    `,
-    expected_nl: 'Learned 5 facts'
-  },
-
-  // === PHASE 17: Prove perception ===
+  // === PHASE 5: Prove 5-step hierarchy ===
+  // CHAIN: John -> Father -> Parent -> Adult -> Person -> Being (5 hops)
   {
     action: 'prove',
-    input_nl: 'Does John see the bird?',
-    input_dsl: '@goal see John Bird',
-    expected_nl: 'Yes, John sees the bird'
+    input_nl: 'Is John a being?',
+    input_dsl: '@goal isA John Being',
+    expected_nl: 'True: John is a being. Proof: John is a father. Father is a parent. Parent is an adult. Adult is a person. Person is a being.'
   },
 
-  // === PHASE 18: Query family role ===
+  // === PHASE 6: Prove 2-step rule chain ===
+  // CHAIN: isA(John,Father) + rule1 => protects(John,Family)
+  {
+    action: 'prove',
+    input_nl: 'Does John protect family?',
+    input_dsl: '@goal protects John Family',
+    expected_nl: 'True: John protects Family'
+  },
+
+  // === PHASE 7: Prove 3-step rule chain ===
+  // CHAIN: Father -> protects -> trusts (2 rule applications)
+  {
+    action: 'prove',
+    input_nl: 'Does family trust John?',
+    input_dsl: '@goal trusts Family John',
+    expected_nl: 'True: Family trusts John'
+  },
+
+  // === PHASE 8: Build location hierarchy for family ===
+  {
+    action: 'learn',
+    input_nl: 'World > Country > City > District > Home',
+    input_dsl: `
+      locatedIn USA World
+      locatedIn NewYork USA
+      locatedIn Manhattan NewYork
+      locatedIn HomeAddress Manhattan
+      locatedIn John HomeAddress
+    `,
+    expected_nl: 'Learned 5 facts'
+  },
+
+  // === PHASE 9: Query direct location ===
   {
     action: 'query',
-    input_nl: 'What role is John?',
-    input_dsl: '@q isA John ?role',
-    expected_nl: 'John is a father'
+    input_nl: 'Where is John?',
+    input_dsl: '@q locatedIn John ?where',
+    expected_nl: 'John is in HomeAddress'
+  },
+
+  // === PHASE 10: Prove 3-step location ===
+  // CHAIN: John -> HomeAddress -> Manhattan -> NewYork (3 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is John in New York?',
+    input_dsl: '@goal locatedIn John NewYork',
+    expected_nl: 'True: John is in NewYork. Proof: John is in HomeAddress. HomeAddress is in Manhattan. Manhattan is in NewYork.'
+  },
+
+  // === PHASE 11: Prove 4-step location ===
+  // CHAIN: John -> HomeAddress -> Manhattan -> NewYork -> USA (4 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is John in USA?',
+    input_dsl: '@goal locatedIn John USA',
+    expected_nl: 'True: John is in USA. Proof: John is in HomeAddress. HomeAddress is in Manhattan. Manhattan is in NewYork. NewYork is in USA.'
+  },
+
+  // === PHASE 12: Prove 5-step location ===
+  // CHAIN: John -> HomeAddress -> Manhattan -> NewYork -> USA -> World (5 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is John in the world?',
+    input_dsl: '@goal locatedIn John World',
+    expected_nl: 'True: John is in World. Proof: John is in HomeAddress. HomeAddress is in Manhattan. Manhattan is in NewYork. NewYork is in USA. USA is in World.'
   }
 ];
 

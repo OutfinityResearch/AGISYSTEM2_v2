@@ -1,0 +1,83 @@
+# Default Rules Theory
+# Non-monotonic reasoning with defaults and exceptions
+# DS08: Defaults and defeaters
+
+# === Bird flight - classic example ===
+# Default: Birds typically fly
+@birdFlyDefault defaultRule: (isA $X Bird) => (can $X Fly) unless (abnormal $X Flight)
+
+# Exceptions that defeat the default
+abnormal Penguin Flight
+abnormal Ostrich Flight
+abnormal Kiwi Flight
+abnormal DeadBird Flight
+abnormal BabyBird Flight
+abnormal InjuredBird Flight
+
+# === Mammal examples ===
+# Default: Mammals typically don't fly
+@mammalNoFlyDefault defaultRule: (isA $X Mammal) => (Not (can $X Fly)) unless (abnormal $X MammalFlight)
+
+# Exception: Bats fly
+abnormal Bat MammalFlight
+can Bat Fly
+
+# === Fish examples ===
+# Default: Fish live in water
+@fishWaterDefault defaultRule: (isA $X Fish) => (livesIn $X Water) unless (abnormal $X Habitat)
+
+# Exception: Lungfish can survive on land
+abnormal Lungfish Habitat
+livesIn Lungfish Land
+
+# === Quaker/Republican example (Nixon diamond) ===
+# Quakers are typically pacifist
+@quakerPacifist defaultRule: (isA $X Quaker) => (isA $X Pacifist) unless (abnormal $X QuakerPacifism)
+
+# Republicans are typically not pacifist
+@republicanNonPacifist defaultRule: (isA $X Republican) => (Not (isA $X Pacifist)) unless (abnormal $X RepublicanStance)
+
+# Nixon is both - defaults conflict (ambiguity)
+isA Nixon Quaker
+isA Nixon Republican
+# System should detect ambiguity, not commit to either
+
+# === Specificity principle ===
+# More specific rules override general rules
+
+# Animals breathe
+@animalBreathe defaultRule: (isA $X Animal) => (does $X Breathe) unless (abnormal $X Breathing)
+
+# Fish breathe underwater (more specific)
+@fishBreathe defaultRule: (isA $X Fish) => (does $X BreatheUnderwater) unless (abnormal $X FishBreathing)
+
+# === Legal defaults ===
+# Defendants are presumed innocent
+@innocentDefault defaultRule: (isA $X Defendant) => (hasStatus $X Innocent) unless (proven $X Guilty)
+
+# Proven guilty overrides default
+@guiltyOverride Implies (proven $X Guilty) (abnormal $X Innocence)
+
+# === Employment defaults ===
+# Employees work Monday-Friday by default
+@workdayDefault defaultRule: (isA $X Employee) => (worksOn $X Weekdays) unless (abnormal $X Schedule)
+
+# Part-time exception
+abnormal PartTimeEmployee Schedule
+
+# Remote workers exception
+abnormal RemoteWorker Schedule
+
+# === Inheritance with exceptions ===
+# Vehicles have wheels by default
+@vehicleWheels defaultRule: (isA $X Vehicle) => (has $X Wheels) unless (abnormal $X WheelConfig)
+
+# Boats don't have wheels
+isA Boat Vehicle
+abnormal Boat WheelConfig
+Not (has Boat Wheels)
+
+# Helicopters - different
+isA Helicopter Vehicle
+abnormal Helicopter WheelConfig
+has Helicopter Skids

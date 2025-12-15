@@ -17,9 +17,10 @@ describe('Deep Reasoning', () => {
 
   test('family relations', () => {
     const session = new Session({ geometry: 4096 });
+    // Use anonymous facts for KB persistence
     session.learn(`
-      @f1 parent John Mary
-      @f2 parent John Bob
+      parent John Mary
+      parent John Bob
     `);
     const query = session.query('@q parent John ?child');
     assert.ok('bindings' in query);

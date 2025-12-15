@@ -25,6 +25,24 @@ const args = process.argv.slice(2);
 const verbose = args.includes('--verbose') || args.includes('-v');
 const specificSuites = args.filter(a => !a.startsWith('-'));
 
+// Track results globally for interrupt handler
+let collectedResults = [];
+let interrupted = false;
+
+// Handle Ctrl+C - show summary before exit
+process.on('SIGINT', () => {
+  interrupted = true;
+  console.log('\n\n\x1b[33m⚠ Interrupted by user (Ctrl+C)\x1b[0m\n');
+
+  if (collectedResults.length > 0) {
+    reportGlobalSummary(collectedResults);
+  } else {
+    console.log('\x1b[2mNo results collected yet.\x1b[0m');
+  }
+
+  process.exit(130); // Standard exit code for SIGINT
+});
+
 async function main() {
   console.log();
   console.log('\x1b[1m\x1b[34mAGISystem2 - Evaluation Suite Runner\x1b[0m');
@@ -54,10 +72,13 @@ async function main() {
 
     console.log(`Found ${suites.length} suite(s): ${suites.join(', ')}`);
 
-    const allResults = [];
+    // Reset collected results
+    collectedResults = [];
 
     // Run each suite
     for (const suiteName of suites) {
+      if (interrupted) break;
+
       try {
         // Load suite data
         const suite = await loadSuite(suiteName);
@@ -79,7 +100,7 @@ async function main() {
           }
         }
 
-        allResults.push({
+        collectedResults.push({
           name: suite.name,
           suiteName,
           results,
@@ -94,13 +115,13 @@ async function main() {
       }
     }
 
-    // Global summary
-    if (allResults.length > 1) {
-      reportGlobalSummary(allResults);
+    // Global summary (if not interrupted, interrupt handler shows its own)
+    if (!interrupted && collectedResults.length > 1) {
+      reportGlobalSummary(collectedResults);
     }
 
     // Exit code based on results
-    const allPassed = allResults.every(s => s.summary.failed === 0);
+    const allPassed = collectedResults.every(s => s.summary.failed === 0);
     process.exit(allPassed ? 0 : 1);
 
   } catch (err) {

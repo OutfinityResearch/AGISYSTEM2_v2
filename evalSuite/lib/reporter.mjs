@@ -85,30 +85,30 @@ function formatCaseRow(index, testCase, result) {
 }
 
 /**
+ * Extract suite number from suite directory name (e.g., "suite08_rule_chains" -> "08")
+ * @param {string} suiteName - Suite directory name
+ * @returns {string} Suite number or empty string
+ */
+function extractSuiteNumber(suiteName) {
+  const match = suiteName?.match(/^suite(\d+)/);
+  return match ? match[1] : '';
+}
+
+/**
  * Report suite header
  * @param {Object} suite - Suite data
  */
 export function reportSuiteHeader(suite) {
+  const suiteNum = extractSuiteNumber(suite.suiteName);
+  const numDisplay = suiteNum ? ` #${suiteNum}` : '';
+
   console.log();
   console.log(`${colors.bold}${colors.blue}${'='.repeat(70)}${colors.reset}`);
-  console.log(`${colors.bold}Suite: ${suite.name}${colors.reset}`);
+  console.log(`${colors.bold}Suite: ${suite.name}${numDisplay}${colors.reset}`);
   if (suite.description) {
     console.log(`${colors.dim}${suite.description}${colors.reset}`);
   }
   console.log(`${colors.blue}${'='.repeat(70)}${colors.reset}`);
-  console.log();
-
-  // Show loaded theory stack
-  console.log(`${colors.cyan}Core Theory Stack:${colors.reset}`);
-  for (const file of suite.coreTheory.files) {
-    console.log(`  ${colors.dim}\u2022${colors.reset} ${file}`);
-  }
-  if (suite.suiteTheories.length > 0 || suite.declaredTheories.length > 0) {
-    console.log(`${colors.cyan}Suite Theories:${colors.reset}`);
-    for (const t of suite.declaredTheories) {
-      console.log(`  ${colors.dim}\u2022${colors.reset} ${t}`);
-    }
-  }
   console.log();
 
   // Legend
@@ -188,27 +188,88 @@ export function reportFailureDetails(index, result) {
 }
 
 /**
+ * Format number with K/M suffix for large values
+ */
+function formatNum(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return String(n);
+}
+
+/**
  * Report global summary across all suites
  * @param {Array} suiteResults - Results from all suites
  */
 export function reportGlobalSummary(suiteResults) {
   console.log();
-  console.log(`${colors.bold}${colors.magenta}${'='.repeat(70)}${colors.reset}`);
+  console.log(`${colors.bold}${colors.magenta}${'='.repeat(110)}${colors.reset}`);
   console.log(`${colors.bold}${colors.magenta}EVALUATION COMPLETE${colors.reset}`);
-  console.log(`${colors.magenta}${'='.repeat(70)}${colors.reset}`);
+  console.log(`${colors.magenta}${'='.repeat(110)}${colors.reset}`);
   console.log();
 
   let totalCases = 0;
   let totalPassed = 0;
   let totalPartial = 0;
 
-  console.log(`${colors.bold}Suite Results:${colors.reset}`);
+  // Aggregate reasoning stats across all suites
+  const aggregatedStats = {
+    queries: 0,
+    proofs: 0,
+    kbScans: 0,
+    similarityChecks: 0,
+    ruleAttempts: 0,
+    transitiveSteps: 0,
+    maxProofDepth: 0,
+    totalProofSteps: 0,
+    methods: {},
+    operations: {}
+  };
+
+  // Table header with legend
+  console.log(`${colors.bold}${colors.cyan}Suite Results with Reasoning Statistics:${colors.reset}`);
   console.log();
+  console.log(`${colors.dim}Legend: KBScan=KB lookups | SimChk=vector similarity checks | Trans=transitive reasoning steps${colors.reset}`);
+  console.log(`${colors.dim}        Rules=rule applications | MaxD=max proof depth | AvgL=avg proof length | Query/Proof=counts${colors.reset}`);
+  console.log();
+  console.log(`${colors.dim}${'─'.repeat(110)}${colors.reset}`);
+  console.log(`${colors.bold}` +
+    `${'Suite'.padEnd(32)}` +
+    `${'Pass'.padStart(6)}` +
+    `${'Tests'.padStart(7)}` +
+    `${'KBScan'.padStart(8)}` +
+    `${'SimChk'.padStart(8)}` +
+    `${'Trans'.padStart(7)}` +
+    `${'Rules'.padStart(7)}` +
+    `${'MaxD'.padStart(6)}` +
+    `${'AvgL'.padStart(6)}` +
+    `${'Query'.padStart(7)}` +
+    `${'Proof'.padStart(7)}` +
+    `${colors.reset}`);
+  console.log(`${colors.dim}${'─'.repeat(110)}${colors.reset}`);
 
   for (const suite of suiteResults) {
     totalCases += suite.summary.total;
     totalPassed += suite.summary.passed;
     totalPartial += suite.summary.partialPass || 0;
+
+    // Aggregate reasoning stats
+    const stats = suite.summary.reasoningStats || {};
+    aggregatedStats.queries += stats.queries || 0;
+    aggregatedStats.proofs += stats.proofs || 0;
+    aggregatedStats.kbScans += stats.kbScans || 0;
+    aggregatedStats.similarityChecks += stats.similarityChecks || 0;
+    aggregatedStats.ruleAttempts += stats.ruleAttempts || 0;
+    aggregatedStats.transitiveSteps += stats.transitiveSteps || 0;
+    aggregatedStats.totalProofSteps += stats.totalProofSteps || 0;
+    if ((stats.maxProofDepth || 0) > aggregatedStats.maxProofDepth) {
+      aggregatedStats.maxProofDepth = stats.maxProofDepth;
+    }
+    for (const [method, count] of Object.entries(stats.methods || {})) {
+      aggregatedStats.methods[method] = (aggregatedStats.methods[method] || 0) + count;
+    }
+    for (const [op, count] of Object.entries(stats.operations || {})) {
+      aggregatedStats.operations[op] = (aggregatedStats.operations[op] || 0) + count;
+    }
 
     const pct = suite.summary.total > 0
       ? Math.round((suite.summary.passed / suite.summary.total) * 100)
@@ -216,23 +277,85 @@ export function reportGlobalSummary(suiteResults) {
 
     const statusColor = pct === 100 ? colors.green : pct >= 50 ? colors.yellow : colors.red;
 
-    console.log(`  ${suite.name.padEnd(35)} ${statusColor}${String(pct).padStart(3)}%${colors.reset} (${suite.summary.passed}/${suite.summary.total})`);
+    const suiteNum = extractSuiteNumber(suite.suiteName);
+    const numDisplay = suiteNum ? `#${suiteNum} ` : '';
+    const shortName = suite.name.length > 24 ? suite.name.substring(0, 22) + '..' : suite.name;
+    const displayName = `${numDisplay}${shortName}`;
+
+    console.log(
+      `${displayName.padEnd(32)}` +
+      `${statusColor}${(pct + '%').padStart(5)}${colors.reset} ` +
+      `${colors.dim}${String(suite.summary.passed + '/' + suite.summary.total).padStart(6)}${colors.reset}` +
+      `${formatNum(stats.kbScans || 0).padStart(8)}` +
+      `${formatNum(stats.similarityChecks || 0).padStart(8)}` +
+      `${formatNum(stats.transitiveSteps || 0).padStart(7)}` +
+      `${formatNum(stats.ruleAttempts || 0).padStart(7)}` +
+      `${String(stats.maxProofDepth || 0).padStart(6)}` +
+      `${String(stats.avgProofLength || 0).padStart(6)}` +
+      `${String(stats.queries || 0).padStart(7)}` +
+      `${String(stats.proofs || 0).padStart(7)}`
+    );
   }
 
-  console.log();
-  console.log(`${colors.bold}Overall:${colors.reset}`);
+  console.log(`${colors.dim}${'─'.repeat(110)}${colors.reset}`);
 
+  // Totals row
   const overallPct = totalCases > 0 ? Math.round((totalPassed / totalCases) * 100) : 0;
   const overallColor = overallPct === 100 ? colors.green : overallPct >= 50 ? colors.yellow : colors.red;
+  const avgProofLen = aggregatedStats.proofs > 0
+    ? (aggregatedStats.totalProofSteps / aggregatedStats.proofs).toFixed(1)
+    : '0';
 
-  console.log(`  Total Cases: ${totalCases}`);
-  console.log(`  ${colors.green}Passed:${colors.reset}  ${totalPassed}`);
-  if (totalPartial > 0) {
-    console.log(`  ${colors.yellow}Partial:${colors.reset} ${totalPartial}`);
-  }
-  console.log(`  ${colors.red}Failed:${colors.reset}  ${totalCases - totalPassed}`);
+  console.log(`${colors.bold}` +
+    `${'TOTAL'.padEnd(32)}` +
+    `${overallColor}${(overallPct + '%').padStart(5)}${colors.reset} ` +
+    `${colors.bold}${String(totalPassed + '/' + totalCases).padStart(6)}${colors.reset}` +
+    `${colors.cyan}${formatNum(aggregatedStats.kbScans).padStart(8)}${colors.reset}` +
+    `${colors.cyan}${formatNum(aggregatedStats.similarityChecks).padStart(8)}${colors.reset}` +
+    `${colors.cyan}${formatNum(aggregatedStats.transitiveSteps).padStart(7)}${colors.reset}` +
+    `${colors.cyan}${formatNum(aggregatedStats.ruleAttempts).padStart(7)}${colors.reset}` +
+    `${colors.cyan}${String(aggregatedStats.maxProofDepth).padStart(6)}${colors.reset}` +
+    `${colors.cyan}${avgProofLen.padStart(6)}${colors.reset}` +
+    `${colors.cyan}${String(aggregatedStats.queries).padStart(7)}${colors.reset}` +
+    `${colors.cyan}${String(aggregatedStats.proofs).padStart(7)}${colors.reset}`
+  );
+  console.log(`${colors.dim}${'─'.repeat(110)}${colors.reset}`);
   console.log();
-  console.log(`  ${colors.bold}Score: ${overallColor}${overallPct}%${colors.reset}`);
+
+  // Score
+  console.log(`${colors.bold}Score: ${overallColor}${overallPct}%${colors.reset}  ` +
+    `${colors.dim}(${totalPassed} passed, ${totalCases - totalPassed} failed)${colors.reset}`);
+  console.log();
+
+  // Methods and Operations in compact format
+  reportMethodsAndOps(aggregatedStats);
+}
+
+/**
+ * Report methods and operations in compact format
+ */
+function reportMethodsAndOps(stats) {
+  const hasStats = Object.keys(stats.methods).length > 0 || Object.keys(stats.operations).length > 0;
+  if (!hasStats) return;
+
+  console.log(`${colors.bold}${colors.cyan}Reasoning Methods:${colors.reset}`);
+  if (Object.keys(stats.methods).length > 0) {
+    const methodsStr = Object.entries(stats.methods)
+      .sort((a, b) => b[1] - a[1])
+      .map(([m, c]) => `${m.replace(/_/g, ' ')}:${c}`)
+      .join('  ');
+    console.log(`  ${colors.dim}${methodsStr}${colors.reset}`);
+  }
+
+  console.log();
+  console.log(`${colors.bold}${colors.cyan}Operations:${colors.reset}`);
+  if (Object.keys(stats.operations).length > 0) {
+    const opsStr = Object.entries(stats.operations)
+      .sort((a, b) => b[1] - a[1])
+      .map(([o, c]) => `${o.replace(/_/g, ' ')}:${c}`)
+      .join('  ');
+    console.log(`  ${colors.dim}${opsStr}${colors.reset}`);
+  }
   console.log();
 }
 

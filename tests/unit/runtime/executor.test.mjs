@@ -85,7 +85,8 @@ describe('Executor', () => {
       setup();
       const initialCount = session.kbFacts.length;
 
-      const program = parse('@fact loves X Y');
+      // Use @var:name syntax for persistent fact (scope + KB)
+      const program = parse('@fact:fact loves X Y');
       executor.executeProgram(program);
 
       assert.equal(session.kbFacts.length, initialCount + 1);
@@ -309,6 +310,118 @@ describe('Executor', () => {
       const result = executor.executeProgram(program);
 
       assert.ok(result.success);
+    });
+  });
+
+  describe('macro definitions', () => {
+    test('should collect macro body instead of executing', () => {
+      setup();
+      const program = parse(`
+        @TestMacro:testmacro macro param1 param2
+            @local1 op1 $param1
+            @local2 op2 $param2
+            return $local2
+        end
+      `);
+      const result = executor.executeProgram(program);
+
+      assert.ok(result.success, 'macro definition should not cause errors');
+      assert.ok(session.macros, 'session should have macros map');
+      assert.ok(session.macros.has('TestMacro'), 'macro should be stored');
+    });
+
+    test('should store macro parameters', () => {
+      setup();
+      const program = parse(`
+        @MyMacro:mymacro macro arg1 arg2 arg3
+            @result bundle $arg1 $arg2 $arg3
+        end
+      `);
+      executor.executeProgram(program);
+
+      const macro = session.macros.get('MyMacro');
+      assert.ok(macro, 'macro should exist');
+      assert.deepEqual(macro.params, ['arg1', 'arg2', 'arg3']);
+    });
+
+    test('should store macro body statements', () => {
+      setup();
+      const program = parse(`
+        @BodyTest:bodytest macro x
+            @a first $x
+            @b second $a
+            return $b
+        end
+      `);
+      executor.executeProgram(program);
+
+      const macro = session.macros.get('BodyTest');
+      assert.ok(macro, 'macro should exist');
+      assert.equal(macro.body.length, 3, 'body should have 3 statements');
+    });
+
+    test('should handle multiple macro definitions', () => {
+      setup();
+      const program = parse(`
+        @Macro1:m1 macro a
+            @r test $a
+        end
+        @Macro2:m2 macro b
+            @r test $b
+        end
+      `);
+      const result = executor.executeProgram(program);
+
+      assert.ok(result.success);
+      assert.equal(session.macros.size, 2);
+      assert.ok(session.macros.has('Macro1'));
+      assert.ok(session.macros.has('Macro2'));
+    });
+
+    test('should not execute statements inside macro body', () => {
+      setup();
+      // This macro body references $param which doesn't exist globally
+      // If executed, it would throw "Undefined reference"
+      const program = parse(`
+        @SafeMacro:safe macro param
+            @inner test $param
+            @outer wrap $inner
+        end
+      `);
+      const result = executor.executeProgram(program);
+
+      // Should succeed because macro body is stored, not executed
+      assert.ok(result.success, 'macro with undefined refs in body should not fail');
+    });
+
+    test('should handle macro mixed with regular statements', () => {
+      setup();
+      const program = parse(`
+        @fact1 loves John Mary
+        @TestMacro:tm macro x
+            @r test $x
+        end
+        @fact2 knows Alice Bob
+      `);
+      const result = executor.executeProgram(program);
+
+      assert.ok(result.success);
+      assert.ok(session.scope.has('fact1'), 'fact1 should be in scope');
+      assert.ok(session.scope.has('fact2'), 'fact2 should be in scope');
+      assert.ok(session.macros.has('TestMacro'), 'macro should be stored');
+    });
+
+    test('should warn on unclosed macro', () => {
+      setup();
+      const program = parse(`
+        @Unclosed:unclosed macro x
+            @r test $x
+      `);
+      const result = executor.executeProgram(program);
+
+      assert.equal(result.success, false, 'unclosed macro should fail');
+      assert.ok(result.errors.length > 0, 'should have error');
+      assert.ok(result.errors[0].message.includes('Unclosed'), 'error should mention unclosed');
     });
   });
 });

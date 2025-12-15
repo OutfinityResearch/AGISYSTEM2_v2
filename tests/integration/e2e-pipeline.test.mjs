@@ -12,10 +12,10 @@ describe('End-to-End Pipeline', () => {
     test('should encode facts and retrieve them via query', () => {
       const session = new TestSession({ geometry: 2048 });
 
-      // 1. LEARN
+      // 1. LEARN - use @var:name for scope + KB persistence
       session.learnAndVerify(`
-        @f1 loves John Mary
-        @f2 loves Bob Alice
+        @f1:f1 loves John Mary
+        @f2:f2 loves Bob Alice
       `);
 
       // Verify facts were stored
@@ -38,7 +38,8 @@ describe('End-to-End Pipeline', () => {
     test('should handle multi-argument relations', () => {
       const session = new TestSession({ geometry: 2048 });
 
-      session.learn('@sale sells Alice Book Bob');
+      // Use anonymous fact for KB persistence
+      session.learn('sells Alice Book Bob');
 
       const result = session.query('@q sells ?seller Book ?buyer');
       assert.ok('bindings' in result);

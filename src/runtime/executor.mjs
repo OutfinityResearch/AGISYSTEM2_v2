@@ -16,6 +16,9 @@ import {
   Literal,
   List
 } from '../parser/ast.mjs';
+import { parse } from '../parser/parser.mjs';
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
 
 export class ExecutionError extends Error {
   constructor(message, node) {
@@ -30,9 +33,13 @@ export class Executor {
   /**
    * Create executor
    * @param {Session} session - Parent session
+   * @param {Object} options - Options
+   * @param {string} options.basePath - Base path for relative file loading
    */
-  constructor(session) {
+  constructor(session, options = {}) {
     this.session = session;
+    this.basePath = options.basePath || process.cwd();
+    this.loadedTheories = new Set();  // Track loaded theory paths
   }
 
   /**
@@ -44,13 +51,58 @@ export class Executor {
     const results = [];
     const errors = [];
 
+    // Track macro definition context
+    let macroContext = null;  // { name, persistName, params, body }
+
     for (const stmt of program.statements) {
       try {
+        const operatorName = this.extractName(stmt.operator);
+
+        // Check if starting a macro definition
+        if (operatorName === 'macro') {
+          macroContext = {
+            name: stmt.destination,
+            persistName: stmt.persistName,
+            params: stmt.args.map(a => this.extractName(a)),
+            body: [],
+            line: stmt.line
+          };
+          continue;
+        }
+
+        // Check if ending a macro definition
+        if (operatorName === 'end' && macroContext) {
+          // Store the macro definition
+          if (!this.session.macros) {
+            this.session.macros = new Map();
+          }
+          this.session.macros.set(macroContext.name, macroContext);
+          results.push({
+            type: 'macro_definition',
+            name: macroContext.name,
+            params: macroContext.params
+          });
+          macroContext = null;
+          continue;
+        }
+
+        // If inside macro, collect statement instead of executing
+        if (macroContext) {
+          macroContext.body.push(stmt);
+          continue;
+        }
+
+        // Normal execution
         const result = this.executeStatement(stmt);
         results.push(result);
       } catch (e) {
         errors.push(e);
       }
+    }
+
+    // Warn if macro wasn't closed
+    if (macroContext) {
+      errors.push(new ExecutionError(`Unclosed macro definition: ${macroContext.name}`, { line: macroContext.line }));
     }
 
     return {
@@ -75,6 +127,15 @@ export class Executor {
       throw new ExecutionError('Expected Statement node', stmt);
     }
 
+    // Check for special operators (Load, Unload)
+    const operatorName = this.extractName(stmt.operator);
+    if (operatorName === 'Load') {
+      return this.executeLoad(stmt);
+    }
+    if (operatorName === 'Unload') {
+      return this.executeUnload(stmt);
+    }
+
     // Build the vector for this statement
     const vector = this.buildStatementVector(stmt);
 
@@ -89,7 +150,9 @@ export class Executor {
     const shouldPersist = !stmt.destination || stmt.isPersistent;
 
     if (shouldPersist) {
-      this.session.addToKB(vector, stmt.persistName);
+      // Extract metadata for structured storage
+      const metadata = this.extractMetadata(stmt);
+      this.session.addToKB(vector, stmt.persistName, metadata);
     }
 
     return {
@@ -99,6 +162,190 @@ export class Executor {
       vector,
       statement: stmt.toString()
     };
+  }
+
+  /**
+   * Execute Load command - load a theory from file
+   * Syntax: @_ Load "./path/to/file.sys2"
+   * @param {Statement} stmt - Load statement
+   * @returns {Object} Result
+   */
+  executeLoad(stmt) {
+    if (stmt.args.length < 1) {
+      throw new ExecutionError('Load requires a file path argument', stmt);
+    }
+
+    const pathArg = stmt.args[0];
+    let filePath;
+
+    // Get the file path from the argument
+    if (pathArg instanceof Literal) {
+      filePath = String(pathArg.value);
+    } else if (pathArg instanceof Identifier) {
+      // Could be a theory name - try to resolve it
+      filePath = pathArg.name;
+    } else {
+      throw new ExecutionError('Load requires a string path or theory name', stmt);
+    }
+
+    // Resolve relative paths
+    const absolutePath = resolve(this.basePath, filePath);
+
+    // Prevent double-loading
+    if (this.loadedTheories.has(absolutePath)) {
+      return {
+        destination: stmt.destination,
+        loaded: false,
+        reason: 'Already loaded',
+        path: absolutePath,
+        statement: stmt.toString()
+      };
+    }
+
+    try {
+      // Read and parse the theory file
+      const content = readFileSync(absolutePath, 'utf8');
+
+      // Update base path for relative imports within the loaded file
+      const previousBasePath = this.basePath;
+      this.basePath = dirname(absolutePath);
+
+      // Parse and execute the content
+      const program = parse(content);
+      const result = this.executeProgram(program);
+
+      // Track Implies rules for backward chaining
+      this.trackRulesFromProgram(program);
+
+      // Restore base path
+      this.basePath = previousBasePath;
+
+      // Mark as loaded only if no errors
+      const hasErrors = result.errors && result.errors.length > 0;
+      if (!hasErrors) {
+        this.loadedTheories.add(absolutePath);
+      }
+
+      return {
+        destination: stmt.destination,
+        loaded: !hasErrors,
+        success: !hasErrors,
+        path: absolutePath,
+        factsLoaded: result.results.length,
+        errors: result.errors,
+        statement: stmt.toString()
+      };
+    } catch (e) {
+      throw new ExecutionError(`Failed to load theory: ${e.message}`, stmt);
+    }
+  }
+
+  /**
+   * Execute Unload command - unload a theory
+   * @param {Statement} stmt - Unload statement
+   * @returns {Object} Result
+   */
+  executeUnload(stmt) {
+    if (stmt.args.length < 1) {
+      throw new ExecutionError('Unload requires a theory argument', stmt);
+    }
+
+    const pathArg = stmt.args[0];
+    let filePath;
+
+    if (pathArg instanceof Literal) {
+      filePath = String(pathArg.value);
+    } else if (pathArg instanceof Identifier) {
+      filePath = pathArg.name;
+    } else {
+      throw new ExecutionError('Unload requires a string path or theory name', stmt);
+    }
+
+    const absolutePath = resolve(this.basePath, filePath);
+
+    // Remove from loaded set
+    this.loadedTheories.delete(absolutePath);
+
+    // Note: We don't actually remove facts from KB - that would require
+    // tracking which facts came from which theory. For now, Unload just
+    // prevents re-loading and marks the theory as unloaded.
+
+    return {
+      destination: stmt.destination,
+      unloaded: true,
+      path: absolutePath,
+      statement: stmt.toString()
+    };
+  }
+
+  /**
+   * Track Implies rules from a loaded program for backward chaining
+   * @param {Program} program - AST program
+   */
+  trackRulesFromProgram(program) {
+    for (const stmt of program.statements) {
+      const operatorName = this.extractName(stmt.operator);
+      if (operatorName === 'Implies' && stmt.args.length >= 2) {
+        const condVec = this.resolveExpression(stmt.args[0]);
+        const concVec = this.resolveExpression(stmt.args[1]);
+
+        // Check for compound conditions (And/Or)
+        let conditionParts = null;
+        const condArg = stmt.args[0];
+        if (condArg.type === 'Reference') {
+          const refName = condArg.name;
+          for (const earlierStmt of program.statements) {
+            if (earlierStmt.destination === refName) {
+              const earlyOp = this.extractName(earlierStmt.operator);
+              if (earlyOp === 'And' || earlyOp === 'Or') {
+                conditionParts = {
+                  type: earlyOp,
+                  parts: earlierStmt.args.map(arg => this.resolveExpression(arg))
+                };
+              }
+              break;
+            }
+          }
+        }
+
+        this.session.rules.push({
+          name: stmt.destination,
+          vector: this.buildStatementVector(stmt),
+          source: stmt.toString(),
+          condition: condVec,
+          conclusion: concVec,
+          conditionParts: conditionParts
+        });
+      }
+    }
+  }
+
+  /**
+   * Extract structured metadata from statement for reliable lookup
+   * @param {Statement} stmt - Statement node
+   * @returns {Object} Metadata with operator and args
+   */
+  extractMetadata(stmt) {
+    const operatorName = this.extractName(stmt.operator);
+    const args = stmt.args.map(arg => this.extractName(arg));
+
+    return {
+      operator: operatorName,
+      args: args
+    };
+  }
+
+  /**
+   * Extract name from AST node
+   */
+  extractName(node) {
+    if (!node) return null;
+    if (node instanceof Identifier) return node.name;
+    if (node instanceof Reference) return node.name;
+    if (node instanceof Literal) return String(node.value);
+    if (node.name) return node.name;
+    if (node.value) return String(node.value);
+    return null;
   }
 
   /**

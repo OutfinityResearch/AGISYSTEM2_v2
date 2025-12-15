@@ -1,0 +1,43 @@
+# Inference Rules Theory
+# Classical logical inference patterns
+# FS-49-56: Multi-step proof construction
+
+# === Modus Ponens Chain ===
+# P, P->Q, Q->R, R->S, S->T, T->U => U
+# 6-step chain
+
+# === Syllogism Rules ===
+# All A are B, All B are C => All A are C
+@syllogism1 Implies (And (forall A isA B) (forall B isA C)) (forall A isA C)
+
+# === Property Inheritance ===
+# If X isA Y and Y hasProperty P, then X hasProperty P
+@inheritProp Implies (And (isA $X $Y) (hasProperty $Y $P)) (hasProperty $X $P)
+
+# === Role-based inference ===
+# Doctors can prescribe medicine
+@doctorRule Implies (isA $X Doctor) (can $X Prescribe)
+# Licensed drivers can drive
+@driverRule Implies (hasLicense $X Driving) (can $X Drive)
+# Adults can vote
+@voteRule Implies (isA $X Adult) (can $X Vote)
+# Citizens who can vote should register
+@registerRule Implies (And (isA $X Citizen) (can $X Vote)) (should $X Register)
+
+# === Conditional chains ===
+# If raining then umbrella needed
+# If umbrella needed and no umbrella then get wet
+# If wet then cold
+# If cold then might get sick
+@umbrellaChain1 Implies (hasProperty Weather Rainy) (needs Person Umbrella)
+@umbrellaChain2 Implies (And (needs Person Umbrella) (not (has Person Umbrella))) (becomes Person Wet)
+@umbrellaChain3 Implies (becomes Person Wet) (becomes Person Cold)
+@umbrellaChain4 Implies (becomes Person Cold) (risk Person Sick)
+@umbrellaChain5 Implies (risk Person Sick) (recommend SeeDoctor)
+
+# === Obligation chains ===
+# Employee -> must follow rules -> rules include safety -> must wear helmet
+@obligationChain1 Implies (isA $X Employee) (must $X FollowRules)
+@obligationChain2 Implies (must $X FollowRules) (must $X FollowSafetyRules)
+@obligationChain3 Implies (must $X FollowSafetyRules) (must $X WearHelmet)
+@obligationChain4 Implies (must $X WearHelmet) (requires $X Helmet)

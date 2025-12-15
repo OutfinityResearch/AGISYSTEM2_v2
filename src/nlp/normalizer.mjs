@@ -138,6 +138,15 @@ export function capitalizeWord(word) {
 export function singularize(word) {
   if (!word || word.length < 3) return word;
 
+  // Preserve proper nouns (capitalized words that look like names)
+  // Names ending in 's' like Whiskers, James, Thomas should NOT be singularized
+  if (/^[A-Z][a-z]+s$/.test(word)) {
+    // Check if it's likely a name (not a regular plural)
+    // Common noun plurals have lowercase first letter in normal text
+    // Names like "Whiskers", "James", "Thomas" should be preserved
+    return word;
+  }
+
   const lower = word.toLowerCase();
 
   // Irregular plurals

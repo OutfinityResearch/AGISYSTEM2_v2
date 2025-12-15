@@ -1,0 +1,95 @@
+# Causal Rules Theory
+# Defines cause-effect chains for multi-step rule inference
+# URS-04, FS-49-56: Rule-based backward chaining
+
+# === Weather Causation Chain ===
+# rain -> wet -> slippery -> dangerous -> accident risk
+
+# Base facts - build conditions and conclusions as temporary vars
+@r1cond hasProperty Weather Rain
+@r1conc hasProperty Ground Wet
+@r1:weatherWet Implies $r1cond $r1conc
+
+@r2cond hasProperty Ground Wet
+@r2conc hasProperty Ground Slippery
+@r2:wetSlippery Implies $r2cond $r2conc
+
+@r3cond hasProperty Ground Slippery
+@r3conc hasProperty Driving Dangerous
+@r3:slipperyDanger Implies $r3cond $r3conc
+
+@r4cond hasProperty Driving Dangerous
+@r4conc hasProperty AccidentRisk High
+@r4:dangerRisk Implies $r4cond $r4conc
+
+@r5cond hasProperty AccidentRisk High
+@r5conc recommend StayHome
+@r5:riskStay Implies $r5cond $r5conc
+
+# === Fire Chain ===
+# spark + fuel -> fire -> heat -> smoke -> alarm
+@spark present Spark
+@fuel present Fuel
+@r6cond And $spark $fuel
+@r6conc present Fire
+@r6:sparkFire Implies $r6cond $r6conc
+
+@r7cond present Fire
+@r7conc present Heat
+@r7:fireHeat Implies $r7cond $r7conc
+
+@r8cond present Fire
+@r8conc present Smoke
+@r8:fireSmoke Implies $r8cond $r8conc
+
+@r9cond present Smoke
+@r9conc trigger Alarm
+@r9:smokeAlarm Implies $r9cond $r9conc
+
+@r10cond trigger Alarm
+@r10conc action Evacuate
+@r10:alarmEvac Implies $r10cond $r10conc
+
+# === Economic Chain ===
+# low_rates -> borrowing -> investment -> growth -> employment -> prosperity
+@r11cond hasProperty InterestRates Low
+@r11conc increase Borrowing
+@r11:ratesBorrow Implies $r11cond $r11conc
+
+@r12cond increase Borrowing
+@r12conc increase Investment
+@r12:borrowInvest Implies $r12cond $r12conc
+
+@r13cond increase Investment
+@r13conc increase EconomicGrowth
+@r13:investGrow Implies $r13cond $r13conc
+
+@r14cond increase EconomicGrowth
+@r14conc increase Employment
+@r14:growEmploy Implies $r14cond $r14conc
+
+@r15cond increase Employment
+@r15conc hasState Economy Prosperous
+@r15:employProsp Implies $r15cond $r15conc
+
+# === Health Chain ===
+# virus -> infection -> fever -> weakness -> rest_needed -> recovery
+@r16cond exposed Virus
+@r16conc hasState Body Infected
+@r16:virusInfect Implies $r16cond $r16conc
+
+@r17cond hasState Body Infected
+@r17conc hasSymptom Fever
+@r17:infectFever Implies $r17cond $r17conc
+
+@r18cond hasSymptom Fever
+@r18conc hasSymptom Weakness
+@r18:feverWeak Implies $r18cond $r18conc
+
+@r19cond hasSymptom Weakness
+@r19conc needs Rest
+@r19:weakRest Implies $r19cond $r19conc
+
+@r20cond needs Rest
+@r20conc recommend BedRest
+@r20:restBed Implies $r20cond $r20conc

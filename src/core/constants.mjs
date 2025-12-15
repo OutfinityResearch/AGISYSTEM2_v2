@@ -20,7 +20,8 @@ export const TOP_K_DEFAULT = 5;
 
 // Proof limits
 export const MAX_PROOF_DEPTH = 10;
-export const PROOF_TIMEOUT_MS = 5000;
+export const PROOF_TIMEOUT_MS = 2000;
+export const MAX_REASONING_STEPS = 100;  // Total step limit to prevent infinite loops
 
 // Decoding limits
 export const MAX_NESTING_DEPTH = 3;
@@ -55,12 +56,9 @@ export const TOKEN_TYPES = {
   KEYWORD: 'KEYWORD'
 };
 
-// Keywords
+// Keywords - only those with special parsing in parser.mjs
 export const KEYWORDS = [
   'theory',
   'import',
-  'export',
-  'define',
-  'rule',
-  'fact'
+  'rule'
 ];

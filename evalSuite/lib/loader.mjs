@@ -85,12 +85,45 @@ export async function loadSuiteCases(suiteDir) {
     return {
       name: module.name || 'Unknown Suite',
       description: module.description || '',
-      cases: module.cases || [],
-      theories: module.theories || []
+      // Support both new 'steps' and legacy 'cases' format
+      cases: module.steps || module.cases || [],
+      theories: module.theories || [],
+      localTheories: module.localTheories || [],
+      timeout: module.timeout || null,  // Optional per-suite timeout in ms
+      suiteDir  // Pass through for local theory loading
     };
   } catch (err) {
     throw new Error(`Failed to load suite cases from ${casesPath}: ${err.message}`);
   }
+}
+
+/**
+ * Load local theory file from suite directory
+ * @param {string} suiteDir - Suite directory path
+ * @param {string} theoryPath - Relative path to theory file
+ * @returns {Promise<string>}
+ */
+export async function loadLocalTheory(suiteDir, theoryPath) {
+  const fullPath = join(suiteDir, theoryPath);
+  try {
+    return await readFile(fullPath, 'utf8');
+  } catch (err) {
+    throw new Error(`Failed to load local theory ${theoryPath}: ${err.message}`);
+  }
+}
+
+/**
+ * Load all local theories for a suite
+ * @param {string} suiteDir - Suite directory path
+ * @param {string[]} theoryPaths - Array of relative paths
+ * @returns {Promise<Object<string, string>>}
+ */
+export async function loadLocalTheories(suiteDir, theoryPaths) {
+  const theories = {};
+  for (const path of theoryPaths) {
+    theories[path] = await loadLocalTheory(suiteDir, path);
+  }
+  return theories;
 }
 
 /**
@@ -122,10 +155,13 @@ export async function loadSuite(suiteName) {
     name: suiteConfig.name,
     description: suiteConfig.description,
     suiteName,
+    suiteDir,
     coreTheory,
     suiteTheories,
     cases: suiteConfig.cases,
-    declaredTheories: suiteConfig.theories
+    declaredTheories: suiteConfig.theories,
+    localTheories: suiteConfig.localTheories || [],
+    timeout: suiteConfig.timeout  // Optional per-suite timeout in ms
   };
 }
 
@@ -133,6 +169,8 @@ export default {
   loadCoreTheory,
   loadSuiteTheories,
   loadSuiteCases,
+  loadLocalTheory,
+  loadLocalTheories,
   discoverSuites,
   loadSuite
 };

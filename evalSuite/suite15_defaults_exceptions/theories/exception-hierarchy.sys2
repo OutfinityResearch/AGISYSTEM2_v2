@@ -1,0 +1,72 @@
+# Exception Hierarchy Theory
+# Cascading defaults with specificity
+
+# === Animal taxonomy with defaults ===
+isA Bird Animal
+isA Penguin Bird
+isA Emperor Penguin
+isA Rockhopper Penguin
+
+isA Mammal Animal
+isA Whale Mammal
+isA BlueWhale Whale
+isA Bat Mammal
+
+isA Fish Animal
+isA Shark Fish
+isA FlyingFish Fish
+
+# === Default inheritance ===
+# Level 1: Animals move
+@animalMove defaultRule: (isA $X Animal) => (can $X Move) unless (abnormal $X Movement)
+
+# Level 2: Birds fly (more specific than animal move)
+@birdFly defaultRule: (isA $X Bird) => (can $X Fly) unless (abnormal $X BirdFlight)
+
+# Level 3: Penguins don't fly (most specific)
+@penguinNoFly Implies (isA $X Penguin) (abnormal $X BirdFlight)
+Not (can Penguin Fly)
+
+# But penguins can swim (another default)
+@penguinSwim defaultRule: (isA $X Penguin) => (can $X Swim) unless (abnormal $X PenguinSwim)
+
+# === Property defaults ===
+# Birds have feathers
+@birdFeathers defaultRule: (isA $X Bird) => (has $X Feathers) unless (abnormal $X BirdFeathers)
+
+# Penguins have feathers (inherits, no exception)
+# Kiwis have hair-like feathers (partial exception)
+abnormal Kiwi BirdFeathers
+has Kiwi HairLikeFeathers
+
+# === Size defaults ===
+# Elephants are large by default
+@elephantLarge defaultRule: (isA $X Elephant) => (hasSize $X Large) unless (abnormal $X ElephantSize)
+
+# Baby elephants are small
+@babyElephantSmall Implies (And (isA $X Elephant) (isA $X Baby)) (abnormal $X ElephantSize)
+hasSize BabyElephant Small
+
+# === Dietary defaults ===
+# Cats eat meat
+@catCarnivore defaultRule: (isA $X Cat) => (eats $X Meat) unless (abnormal $X CatDiet)
+
+# Lions eat large prey (more specific)
+@lionPrey defaultRule: (isA $X Lion) => (eats $X LargePrey) unless (abnormal $X LionDiet)
+
+# Pet cats eat cat food (exception for domestic)
+isA HouseCat Cat
+abnormal HouseCat CatDiet
+eats HouseCat CatFood
+
+# === Behavior defaults ===
+# Dogs are friendly
+@dogFriendly defaultRule: (isA $X Dog) => (isFriendly $X) unless (abnormal $X DogTemperament)
+
+# Guard dogs are not friendly (to strangers)
+@guardDogUnfriendly Implies (isA $X GuardDog) (abnormal $X DogTemperament)
+Not (isFriendly GuardDog ToStrangers)
+
+# === Transitivity with defaults ===
+# If X is Emperor (Penguin), X is Penguin, X is Bird, X is Animal
+# Each level may have different defaults

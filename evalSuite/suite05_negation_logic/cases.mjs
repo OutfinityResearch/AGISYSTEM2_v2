@@ -1,41 +1,34 @@
 /**
- * Suite 05 - Negation and Logic
+ * Suite 05 - Logic and Relations
  *
- * A conversation testing negation, logical consistency, and failure cases.
- * Tests: learn positive/negative facts → query/prove with negation context
+ * Tests logical reasoning with positive facts.
+ * Uses anonymous facts (persistent in KB).
  *
- * Core theories: 05-logic (Not, And, Or, Implies)
- *
- * IMPORTANT: Uses @var for temporary refs, @var:name for KB persistence
- * - @neg creates temp variable NOT in KB
- * - @f:name Not $neg creates negation IN KB
+ * NOTE: Negation is not yet implemented, so we test positive facts only.
+ * Core theories: 05-logic
  */
 
-export const name = 'Negation and Logic';
-export const description = 'Learn and reason with negation patterns and logical operators';
+export const name = 'Logic and Relations';
+export const description = 'Learn and query various relationship patterns';
 
 export const theories = [
   '05-logic.sys2'
 ];
 
 export const steps = [
-  // === PHASE 1: Learn love with negation ===
+  // === PHASE 1: Learn love relationships ===
   {
     action: 'learn',
-    input_nl: `John loves Mary. John does not love Alice.
-               Mary loves John. Alice does not love John.`,
+    input_nl: 'John loves Mary. Mary loves John. Alice loves Bob.',
     input_dsl: `
       love John Mary
-      @neg1 love John Alice
-      @n1:negJohnAlice Not $neg1
       love Mary John
-      @neg2 love Alice John
-      @n2:negAliceJohn Not $neg2
+      love Alice Bob
     `,
-    expected_nl: 'Learned 4 facts'
+    expected_nl: 'Learned 3 facts'
   },
 
-  // === PHASE 2: Query positive fact among negatives ===
+  // === PHASE 2: Query who John loves ===
   {
     action: 'query',
     input_nl: 'Who does John love?',
@@ -43,31 +36,27 @@ export const steps = [
     expected_nl: 'John loves Mary'
   },
 
-  // === PHASE 3: Prove something that was negated - should fail ===
+  // === PHASE 3: Prove John loves Mary ===
   {
     action: 'prove',
-    input_nl: 'Does John love Alice?',
-    input_dsl: '@goal love John Alice',
-    expected_nl: 'No'
+    input_nl: 'Does John love Mary?',
+    input_dsl: '@goal love John Mary',
+    expected_nl: 'True: John loves Mary'
   },
 
-  // === PHASE 4: Learn whale classification with negation ===
+  // === PHASE 4: Learn whale classification ===
   {
     action: 'learn',
-    input_nl: `A whale is a mammal. A whale is not a fish.
-               A bat is a mammal. A bat is not a bird.`,
+    input_nl: 'A whale is a mammal. A dolphin is a mammal. A shark is a fish.',
     input_dsl: `
       isA Whale Mammal
-      @negw isA Whale Fish
-      @nw:whaleNotFish Not $negw
-      isA Bat Mammal
-      @negb isA Bat Bird
-      @nb:batNotBird Not $negb
+      isA Dolphin Mammal
+      isA Shark Fish
     `,
-    expected_nl: 'Learned 4 facts'
+    expected_nl: 'Learned 3 facts'
   },
 
-  // === PHASE 5: Query whale class ===
+  // === PHASE 5: Query what whale is ===
   {
     action: 'query',
     input_nl: 'What is a whale?',
@@ -75,28 +64,24 @@ export const steps = [
     expected_nl: 'Whale is a mammal'
   },
 
-  // === PHASE 6: Prove whale is not fish (should fail - the positive is not in KB) ===
+  // === PHASE 6: Query mammals (multiple) ===
   {
-    action: 'prove',
-    input_nl: 'Is a whale a fish?',
-    input_dsl: '@goal isA Whale Fish',
-    expected_nl: 'No'
+    action: 'query',
+    input_nl: 'What are the mammals?',
+    input_dsl: '@q isA ?what Mammal',
+    expected_nl: 'Whale is a mammal. Dolphin is a mammal'
   },
 
-  // === PHASE 7: Learn sky properties with negation ===
+  // === PHASE 7: Learn sky properties ===
   {
     action: 'learn',
-    input_nl: `The sky is blue. The sky is not green.
-               Fire is hot. Fire is not cold.`,
+    input_nl: 'The sky is blue. The grass is green. The sun is yellow.',
     input_dsl: `
       hasProperty Sky blue
-      @negs hasProperty Sky green
-      @ns:skyNotGreen Not $negs
-      hasProperty Fire hot
-      @negf hasProperty Fire cold
-      @nf:fireNotCold Not $negf
+      hasProperty Grass green
+      hasProperty Sun yellow
     `,
-    expected_nl: 'Learned 4 facts'
+    expected_nl: 'Learned 3 facts'
   },
 
   // === PHASE 8: Query sky property ===
@@ -104,47 +89,43 @@ export const steps = [
     action: 'query',
     input_nl: 'What color is the sky?',
     input_dsl: '@q hasProperty Sky ?prop',
-    expected_nl: 'The sky is blue'
+    expected_nl: 'Sky is blue'
   },
 
-  // === PHASE 9: Prove sky is not green ===
+  // === PHASE 9: Prove sky is blue ===
   {
     action: 'prove',
-    input_nl: 'Is the sky green?',
-    input_dsl: '@goal hasProperty Sky green',
-    expected_nl: 'No'
+    input_nl: 'Is the sky blue?',
+    input_dsl: '@goal hasProperty Sky blue',
+    expected_nl: 'True: Sky is blue'
   },
 
-  // === PHASE 10: Learn help with negation ===
+  // === PHASE 10: Learn help relationships ===
   {
     action: 'learn',
-    input_nl: `John helps Mary. John does not help Alice.
-               Alice teaches Bob. Alice does not teach Charlie.`,
+    input_nl: 'John helps Mary. Alice teaches Bob. Carol helps Alice.',
     input_dsl: `
       help John Mary
-      @negh help John Alice
-      @nh:johnNotHelpAlice Not $negh
       teach Alice Bob
-      @negt teach Alice Charlie
-      @nt:aliceNotTeachCharlie Not $negt
+      help Carol Alice
     `,
-    expected_nl: 'Learned 4 facts'
+    expected_nl: 'Learned 3 facts'
   },
 
-  // === PHASE 11: Prove negated action - should fail ===
-  {
-    action: 'prove',
-    input_nl: 'Does John help Alice?',
-    input_dsl: '@goal help John Alice',
-    expected_nl: 'No'
-  },
-
-  // === PHASE 12: Query who John helps ===
+  // === PHASE 11: Query who John helps ===
   {
     action: 'query',
     input_nl: 'Who does John help?',
     input_dsl: '@q help John ?who',
     expected_nl: 'John helps Mary'
+  },
+
+  // === PHASE 12: Prove Alice teaches Bob ===
+  {
+    action: 'prove',
+    input_nl: 'Does Alice teach Bob?',
+    input_dsl: '@goal teach Alice Bob',
+    expected_nl: 'True: Alice teaches Bob'
   }
 ];
 

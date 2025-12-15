@@ -1,0 +1,65 @@
+# Knowledge Dependency Theory
+# Prerequisites chains for learning - 10 levels deep
+
+# === Mathematics learning path ===
+# Level 1: Fundamentals
+requires Counting Nothing
+requires NumberRecognition Counting
+
+# Level 2: Basic arithmetic
+requires Addition NumberRecognition
+requires Subtraction Addition
+
+# Level 3: Multiplication
+requires Multiplication Subtraction
+requires Division Multiplication
+
+# Level 4: Fractions
+requires Fractions Division
+requires Decimals Fractions
+
+# Level 5: Basic Algebra
+requires Variables Decimals
+requires Equations Variables
+
+# Level 6: Advanced Algebra
+requires Polynomials Equations
+requires Factoring Polynomials
+
+# Level 7: Pre-Calculus
+requires Functions Factoring
+requires Trigonometry Functions
+
+# Level 8: Calculus
+requires Limits Trigonometry
+requires Derivatives Limits
+
+# Level 9: Advanced Calculus
+requires Integrals Derivatives
+requires DifferentialEquations Integrals
+
+# Level 10: Advanced Math
+requires LinearAlgebra DifferentialEquations
+requires RealAnalysis LinearAlgebra
+
+# === Programming learning path ===
+requires BasicSyntax Nothing
+requires Variables_Prog BasicSyntax
+requires ControlFlow Variables_Prog
+requires Functions_Prog ControlFlow
+requires DataStructures Functions_Prog
+requires Algorithms DataStructures
+requires OOP Algorithms
+requires DesignPatterns OOP
+requires Architecture DesignPatterns
+requires SystemDesign Architecture
+
+# === Learning rules ===
+# If A requires B and B requires C, then A indirectly requires C
+@prereqTrans Implies (And (requires $A $B) (requires $B $C)) (indirectlyRequires $A $C)
+
+# Can learn if all prerequisites met
+@canLearn Implies (And (requires $Topic $Prereq) (knows Student $Prereq)) (canLearn Student $Topic)
+
+# Transitive learning path
+@learnPath Implies (And (requires $A $B) (requires $B $C)) (isOnPathTo $C $A)

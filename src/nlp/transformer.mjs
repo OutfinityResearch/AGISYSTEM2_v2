@@ -238,21 +238,23 @@ export class NLTransformer {
    * @returns {string|null}
    */
   statementToDSL(parsed, name) {
+    // Simple facts go directly to KB (no @ prefix)
+    // @ prefix is only for intermediate expressions that need references
     switch (parsed.type) {
       case 'isA':
-        return `@${name} isA ${parsed.subject} ${parsed.object}`;
+        return `isA ${parsed.subject} ${parsed.object}`;
 
       case 'binary':
-        return `@${name} ${parsed.operator} ${parsed.subject} ${parsed.object}`;
+        return `${parsed.operator} ${parsed.subject} ${parsed.object}`;
 
       case 'ternary':
-        return `@${name} ${parsed.operator} ${parsed.args.join(' ')}`;
+        return `${parsed.operator} ${parsed.args.join(' ')}`;
 
       case 'unary':
-        return `@${name} ${parsed.operator} ${parsed.subject}`;
+        return `${parsed.operator} ${parsed.subject}`;
 
       case 'property':
-        return `@${name} hasProperty ${parsed.subject} ${parsed.property}`;
+        return `hasProperty ${parsed.subject} ${parsed.property}`;
 
       case 'negation': {
         const innerName = 'inner';

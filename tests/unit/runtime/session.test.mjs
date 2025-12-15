@@ -50,7 +50,8 @@ describe('Session', () => {
 
     test('should add facts to KB', () => {
       const session = new Session({ geometry: 1024 });
-      session.learn('@f loves John Mary');
+      // Use @var:name syntax for persistent fact (scope + KB)
+      session.learn('@f:f loves John Mary');
 
       assert.ok(session.kb !== null);
       assert.equal(session.kbFacts.length, 1);
@@ -60,7 +61,8 @@ describe('Session', () => {
   describe('query', () => {
     test('should query with single hole', () => {
       const session = new Session({ geometry: 1024 });
-      session.learn('@f loves John Mary');
+      // Use anonymous fact for KB persistence (no scope needed for learning)
+      session.learn('loves John Mary');
 
       const result = session.query('@q loves ?who Mary');
       // Note: with 1024 geometry, results may not be perfect
@@ -155,7 +157,8 @@ describe('Session', () => {
   describe('dump', () => {
     test('should return session state', () => {
       const session = new Session({ geometry: 1024 });
-      session.learn('@f loves John Mary');
+      // Use @var:name syntax for persistent fact (scope + KB)
+      session.learn('@f:f loves John Mary');
 
       const dump = session.dump();
       assert.equal(dump.geometry, 1024);

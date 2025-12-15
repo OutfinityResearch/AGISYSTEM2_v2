@@ -33,8 +33,8 @@ test('ProofEngine: prove operations', () => {
   const session = new Session({ geometry: 2048 });
   const prover = new ProofEngine(session);
 
-  // Test direct fact proof
-  session.learn('@f isA Socrates Human');
+  // Test direct fact proof - use anonymous fact for KB persistence
+  session.learn('isA Socrates Human');
   const goal = parse('@g isA Socrates Human').statements[0];
   const result = prover.prove(goal);
 
@@ -50,8 +50,8 @@ test('ProofEngine: tryDirectMatch operations', () => {
   const session = new Session({ geometry: 2048 });
   const prover = new ProofEngine(session);
 
-  // With fact
-  session.learn('@f exact Match');
+  // With fact - use anonymous fact for KB persistence
+  session.learn('exact Match');
   const goal1 = parse('@g exact Match').statements[0];
   const goalVector1 = session.executor.buildStatementVector(goal1);
   const result1 = prover.tryDirectMatch(goalVector1, 'exact Match');
@@ -66,4 +66,81 @@ test('ProofEngine: tryDirectMatch operations', () => {
   const result2 = prover2.tryDirectMatch(goalVector2, 'missing Fact');
   assert.equal(result2.success, false);
   assert.equal(result2.confidence, 0);
+});
+
+// ================================================================
+// TRANSITIVE REASONING TESTS
+// ================================================================
+
+test('Session.prove: transitive isA - 2-step chain', () => {
+  const session = new Session({ geometry: 2048 });
+
+  // Learn: Socrates -> Philosopher -> Human
+  session.learn('isA Socrates Philosopher');
+  session.learn('isA Philosopher Human');
+
+  // Direct fact should prove
+  const direct = session.prove('@goal isA Socrates Philosopher');
+  assert.equal(direct.valid, true, 'Direct fact should be provable');
+
+  // Transitive: Socrates -> Human (via Philosopher)
+  const transitive = session.prove('@goal isA Socrates Human');
+  assert.equal(transitive.valid, true, 'Transitive isA should be provable (2-step)');
+  assert.ok(transitive.confidence > 0.5, 'Transitive proof should have reasonable confidence');
+});
+
+test('Session.prove: transitive isA - 3-step chain', () => {
+  const session = new Session({ geometry: 2048 });
+
+  // Learn: Socrates -> Philosopher -> Human -> Primate
+  session.learn('isA Socrates Philosopher');
+  session.learn('isA Philosopher Human');
+  session.learn('isA Human Primate');
+
+  // 3-step: Socrates -> Primate
+  const result = session.prove('@goal isA Socrates Primate');
+  assert.equal(result.valid, true, 'Transitive isA should be provable (3-step)');
+});
+
+test('Session.prove: transitive locatedIn - 2-step chain', () => {
+  const session = new Session({ geometry: 2048 });
+
+  // Learn: SacreCoeur -> Montmartre -> Paris
+  session.learn('locatedIn SacreCoeur Montmartre');
+  session.learn('locatedIn Montmartre Paris');
+
+  // Direct fact should prove
+  const direct = session.prove('@goal locatedIn SacreCoeur Montmartre');
+  assert.equal(direct.valid, true, 'Direct locatedIn should be provable');
+
+  // Transitive: SacreCoeur -> Paris
+  const transitive = session.prove('@goal locatedIn SacreCoeur Paris');
+  assert.equal(transitive.valid, true, 'Transitive locatedIn should be provable');
+});
+
+test('Session.prove: transitive - negative case (no chain exists)', () => {
+  const session = new Session({ geometry: 2048 });
+
+  // Learn disconnected facts
+  session.learn('isA Rex Dog');
+  session.learn('isA Cat Animal');  // Rex is not connected to Animal
+
+  // Should NOT prove (no transitive path)
+  const result = session.prove('@goal isA Rex Animal');
+  assert.equal(result.valid, false, 'Should not prove without valid chain');
+});
+
+test('Session.prove: transitive isA - 5-step chain', () => {
+  const session = new Session({ geometry: 2048 });
+
+  // Long chain: A -> B -> C -> D -> E -> F
+  session.learn('isA Socrates Philosopher');
+  session.learn('isA Philosopher Human');
+  session.learn('isA Human Primate');
+  session.learn('isA Primate Mammal');
+  session.learn('isA Mammal Animal');
+
+  // 5-step: Socrates -> Animal
+  const result = session.prove('@goal isA Socrates Animal');
+  assert.equal(result.valid, true, 'Transitive isA should work for 5-step chain');
 });

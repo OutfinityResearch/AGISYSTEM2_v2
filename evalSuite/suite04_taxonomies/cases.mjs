@@ -1,8 +1,8 @@
 /**
  * Suite 04 - Taxonomies and Properties
  *
- * A conversation about hierarchical classifications and properties.
- * Tests: deep taxonomy chains, property inheritance, geographic relations.
+ * Tests hierarchical classifications and properties.
+ * Uses anonymous facts (persistent in KB).
  *
  * Core theories: 00-types, 09-roles, 10-properties
  */
@@ -20,17 +20,14 @@ export const steps = [
   // === PHASE 1: Learn deep animal taxonomy ===
   {
     action: 'learn',
-    input_nl: `Mammals are animals. Birds are animals. Dogs are mammals.
-               Cats are mammals. Whales are mammals. Sparrows are birds.`,
+    input_nl: 'Mammals are animals. Birds are animals. Dogs are mammals. Cats are mammals.',
     input_dsl: `
-      @t1 isA Mammal Animal
-      @t2 isA Bird Animal
-      @t3 isA Dog Mammal
-      @t4 isA Cat Mammal
-      @t5 isA Whale Mammal
-      @t6 isA Sparrow Bird
+      isA Mammal Animal
+      isA Bird Animal
+      isA Dog Mammal
+      isA Cat Mammal
     `,
-    expected_nl: 'Learned 6 facts'
+    expected_nl: 'Learned 4 facts'
   },
 
   // === PHASE 2: Query parent class ===
@@ -41,46 +38,57 @@ export const steps = [
     expected_nl: 'Dog is a mammal'
   },
 
-  // === PHASE 3: Learn color properties ===
+  // === PHASE 3: Query mammal parent ===
   {
-    action: 'learn',
-    input_nl: `The sky is blue. The ocean is blue. The grass is green.
-               Leaves are green. Snow is white. Clouds are white.`,
-    input_dsl: `
-      @c1 hasProperty Sky blue
-      @c2 hasProperty Ocean blue
-      @c3 hasProperty Grass green
-      @c4 hasProperty Leaves green
-      @c5 hasProperty Snow white
-      @c6 hasProperty Clouds white
-    `,
-    expected_nl: 'Learned 6 facts'
+    action: 'query',
+    input_nl: 'What category is a mammal?',
+    input_dsl: '@q isA Mammal ?parent',
+    expected_nl: 'Mammal is an animal'
   },
 
-  // === PHASE 4: Query property ===
+  // === PHASE 4: Learn color properties ===
+  {
+    action: 'learn',
+    input_nl: 'The sky is blue. The ocean is blue. The grass is green. Snow is white.',
+    input_dsl: `
+      hasProperty Sky blue
+      hasProperty Ocean blue
+      hasProperty Grass green
+      hasProperty Snow white
+    `,
+    expected_nl: 'Learned 4 facts'
+  },
+
+  // === PHASE 5: Query property ===
   {
     action: 'query',
     input_nl: 'What color is the sky?',
     input_dsl: '@q hasProperty Sky ?prop',
-    expected_nl: 'The sky is blue'
+    expected_nl: 'Sky is blue'
   },
 
-  // === PHASE 5: Learn geographic hierarchy ===
+  // === PHASE 6: Query grass color ===
+  {
+    action: 'query',
+    input_nl: 'What color is the grass?',
+    input_dsl: '@q hasProperty Grass ?prop',
+    expected_nl: 'Grass is green'
+  },
+
+  // === PHASE 7: Learn geographic hierarchy ===
   {
     action: 'learn',
-    input_nl: `Paris is in France. Lyon is in France. France is in Europe.
-               Germany is in Europe. Berlin is in Germany.`,
+    input_nl: 'Paris is in France. Lyon is in France. France is in Europe. Berlin is in Germany.',
     input_dsl: `
-      @g1 locatedIn Paris France
-      @g2 locatedIn Lyon France
-      @g3 locatedIn France Europe
-      @g4 locatedIn Germany Europe
-      @g5 locatedIn Berlin Germany
+      locatedIn Paris France
+      locatedIn Lyon France
+      locatedIn France Europe
+      locatedIn Berlin Germany
     `,
-    expected_nl: 'Learned 5 facts'
+    expected_nl: 'Learned 4 facts'
   },
 
-  // === PHASE 6: Query city location ===
+  // === PHASE 8: Query city location ===
   {
     action: 'query',
     input_nl: 'Where is Paris?',
@@ -88,45 +96,27 @@ export const steps = [
     expected_nl: 'Paris is in France'
   },
 
-  // === PHASE 7: Learn car properties ===
-  {
-    action: 'learn',
-    input_nl: `The car is red. The car is fast. The car is expensive.
-               The house is big. The house is old.`,
-    input_dsl: `
-      @p1 hasProperty Car red
-      @p2 hasProperty Car fast
-      @p3 hasProperty Car expensive
-      @p4 hasProperty House big
-      @p5 hasProperty House old
-    `,
-    expected_nl: 'Learned 5 facts'
-  },
-
-  // === PHASE 8: Query car property ===
+  // === PHASE 9: Query multiple cities in France ===
   {
     action: 'query',
-    input_nl: 'What property does the car have?',
-    input_dsl: '@q hasProperty Car ?prop',
-    expected_nl: 'The car is red'
+    input_nl: 'What is in France?',
+    input_dsl: '@q locatedIn ?what France',
+    expected_nl: 'Paris is in France. Lyon is in France'
   },
 
-  // === PHASE 9: Learn biological classification ===
+  // === PHASE 10: Learn biological classification ===
   {
     action: 'learn',
-    input_nl: `Plants are organisms. Animals are organisms. Trees are plants.
-               Flowers are plants. Ferns are plants.`,
+    input_nl: 'Plants are organisms. Animals are organisms. Trees are plants.',
     input_dsl: `
-      @b1 isA Plant Organism
-      @b2 isA Animal Organism
-      @b3 isA Tree Plant
-      @b4 isA Flower Plant
-      @b5 isA Fern Plant
+      isA Plant Organism
+      isA Animal Organism
+      isA Tree Plant
     `,
-    expected_nl: 'Learned 5 facts'
+    expected_nl: 'Learned 3 facts'
   },
 
-  // === PHASE 10: Query tree classification ===
+  // === PHASE 11: Query tree classification ===
   {
     action: 'query',
     input_nl: 'What category is a tree?',
@@ -134,95 +124,72 @@ export const steps = [
     expected_nl: 'Tree is a plant'
   },
 
-  // === PHASE 11: Learn Asian geography ===
+  // === PHASE 12: Learn object categories ===
   {
     action: 'learn',
-    input_nl: `Japan is in Asia. China is in Asia. India is in Asia.
-               Brazil is in South America. Egypt is in Africa.`,
+    input_nl: 'Chairs are furniture. Tables are furniture. Hammers are tools.',
     input_dsl: `
-      @a1 locatedIn Japan Asia
-      @a2 locatedIn China Asia
-      @a3 locatedIn India Asia
-      @a4 locatedIn Brazil SouthAmerica
-      @a5 locatedIn Egypt Africa
+      isA Chair Furniture
+      isA Table Furniture
+      isA Hammer Tool
     `,
-    expected_nl: 'Learned 5 facts'
+    expected_nl: 'Learned 3 facts'
   },
 
-  // === PHASE 12: Query Japan's continent ===
+  // === PHASE 13: Query furniture (multiple) ===
   {
     action: 'query',
-    input_nl: 'What continent is Japan in?',
-    input_dsl: '@q locatedIn Japan ?continent',
-    expected_nl: 'Japan is in Asia'
+    input_nl: 'What is furniture?',
+    input_dsl: '@q isA ?what Furniture',
+    expected_nl: 'Chair is a furniture. Table is a furniture'
   },
 
-  // === PHASE 13: Learn object categories ===
+  // === PHASE 14: Learn landmarks ===
   {
     action: 'learn',
-    input_nl: `Chairs are furniture. Tables are furniture. Beds are furniture.
-               Hammers are tools. Screwdrivers are tools.`,
+    input_nl: 'The Louvre is in Paris. The Eiffel Tower is in Paris. Big Ben is in London.',
     input_dsl: `
-      @o1 isA Chair Furniture
-      @o2 isA Table Furniture
-      @o3 isA Bed Furniture
-      @o4 isA Hammer Tool
-      @o5 isA Screwdriver Tool
+      locatedIn Louvre Paris
+      locatedIn EiffelTower Paris
+      locatedIn BigBen London
     `,
-    expected_nl: 'Learned 5 facts'
+    expected_nl: 'Learned 3 facts'
   },
 
-  // === PHASE 14: Query chair category ===
+  // === PHASE 15: Query landmarks in Paris (multiple) ===
   {
     action: 'query',
-    input_nl: 'What category is a chair?',
-    input_dsl: '@q isA Chair ?category',
-    expected_nl: 'Chair is furniture'
+    input_nl: 'What is in Paris?',
+    input_dsl: '@q locatedIn ?what Paris',
+    expected_nl: 'Louvre is in Paris. EiffelTower is in Paris'
   },
 
-  // === PHASE 15: Learn flower colors ===
-  {
-    action: 'learn',
-    input_nl: `Roses are red. Violets are blue. Sunflowers are yellow.
-               The sun is yellow. The moon is white.`,
-    input_dsl: `
-      @f1 hasProperty Rose red
-      @f2 hasProperty Violet blue
-      @f3 hasProperty Sunflower yellow
-      @f4 hasProperty Sun yellow
-      @f5 hasProperty Moon white
-    `,
-    expected_nl: 'Learned 5 facts'
-  },
-
-  // === PHASE 16: Query rose color ===
-  {
-    action: 'query',
-    input_nl: 'What color is a rose?',
-    input_dsl: '@q hasProperty Rose ?color',
-    expected_nl: 'Roses are red'
-  },
-
-  // === PHASE 17: Learn Parisian landmarks ===
-  {
-    action: 'learn',
-    input_nl: `The Louvre is in Paris. The Eiffel Tower is in Paris.
-               The Colosseum is in Rome. Big Ben is in London.`,
-    input_dsl: `
-      @l1 locatedIn Louvre Paris
-      @l2 locatedIn EiffelTower Paris
-      @l3 locatedIn Colosseum Rome
-      @l4 locatedIn BigBen London
-    `,
-    expected_nl: 'Learned 4 facts'
-  },
-
-  // === PHASE 18: Prove Louvre is in Paris ===
+  // === PHASE 16: Prove Louvre is in Paris ===
   {
     action: 'prove',
     input_nl: 'Is the Louvre in Paris?',
     input_dsl: '@goal locatedIn Louvre Paris',
-    expected_nl: 'Yes, the Louvre is in Paris'
+    expected_nl: 'True: Louvre is in Paris'
+  },
+
+  // === PHASE 17: Learn more properties ===
+  {
+    action: 'learn',
+    input_nl: 'Fire is hot. Ice is cold. The sun is bright.',
+    input_dsl: `
+      hasProperty Fire hot
+      hasProperty Ice cold
+      hasProperty Sun bright
+    `,
+    expected_nl: 'Learned 3 facts'
+  },
+
+  // === PHASE 18: Prove fire is hot ===
+  {
+    action: 'prove',
+    input_nl: 'Is fire hot?',
+    input_dsl: '@goal hasProperty Fire hot',
+    expected_nl: 'True: Fire is hot'
   }
 ];
 

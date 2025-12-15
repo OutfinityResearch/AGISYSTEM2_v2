@@ -333,4 +333,59 @@ src/
 
 ---
 
+## 15. Design Specification Reference (DS Files)
+
+**IMPORTANT FOR AI ASSISTANTS:** The detailed technical specifications are located in `docs/specs/DS/`. These files contain essential implementation details that MUST be consulted before making changes to the codebase.
+
+### 15.1 DS File Index and When to Read
+
+| File | Content | Read When |
+|------|---------|-----------|
+| **DS00-Vision.md** | Project vision and goals | Understanding overall purpose |
+| **DS01-Theoretical-Foundation.md** | HDC theory basics | Implementing core vector operations |
+| **DS02-DSL-Syntax.md** | **CRITICAL:** Complete DSL grammar | Writing/parsing ANY DSL code |
+| **DS03-Architecture.md** | System architecture overview | Understanding module relationships |
+| **DS03-Memory-Model.md** | Memory and KB model | Implementing session/KB operations |
+| **DS05-Basic-Reasoning-Engine.md** | Query and prove algorithms | Implementing reasoning |
+| **DS06-Advanced-Reasoning.md** | Advanced inference patterns | Implementing rule chains, defaults |
+| **DS07-Core-Theory.md** | Core theory content and types | Understanding L0-L3 layers |
+| **DS08-ThurstworthyAI-Patterns.md** | AI safety patterns | Implementing constraints |
+| **DS09-Core-HDC-Implementation.md** | Vector operation details | Implementing bind/bundle/similarity |
+| **DS10-Code-Plan.md** | Implementation roadmap | Planning work |
+| **DS11-Decoding-Phrasing-Engine.md** | Vector decoding, NL generation | Implementing decode/summarize |
+| **DS12-Test-Library.md** | Testing requirements | Writing tests |
+| **DS13-BasicNLP.md** | NL→DSL transformation | Implementing NL parser |
+| **DS14-EvalSuite.md** | **CRITICAL:** Evaluation suite format | Writing/fixing eval suites |
+
+### 15.2 Critical DSL Syntax Rules (from DS02)
+
+**NO PARENTHESES IN DSL!** The syntax is:
+```
+@destination Operator arg1 arg2 arg3 ...
+```
+
+**Persistence Rules:**
+| Form | In Scope | In KB | Use Case |
+|------|----------|-------|----------|
+| `operator arg1 arg2` | No | Yes | Simple anonymous facts |
+| `@var:name operator arg1 arg2` | Yes | Yes | Named persistent facts |
+| `@var operator arg1 arg2` | Yes | **No** | Temporary (for references) |
+
+**Building Negation (CORRECT):**
+```dsl
+love John Mary              # → KB (anonymous)
+@neg love John Alice        # → scope only (NOT in KB!)
+@f1:notJohnAlice Not $neg   # → KB (the negation)
+```
+
+### 15.3 EvalSuite Requirements (from DS14)
+
+- **One Suite = One Session:** All steps share the same session
+- **Knowledge Accumulates:** Facts from step N available in step N+1
+- **Theories Load First:** Core theories loaded at session start
+- **Use Both Forms:** Include `input_nl` AND `input_dsl` for learn steps
+- **Minimize Learning Steps:** Most steps should be query/prove, not learn
+
+---
+
 *End of Non-Functional Specification*

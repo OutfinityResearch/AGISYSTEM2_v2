@@ -1,53 +1,53 @@
 /**
  * Suite 01 - Basic Facts and Queries
  *
- * A conversation about basic knowledge: taxonomy, properties, relationships.
- * Tests the full pipeline: learn → query → prove on same session.
+ * Tests multi-step reasoning with deep taxonomic hierarchies.
+ * All prove actions require 3-6 transitive steps.
  *
- * Core theories: 00-types, 05-logic, 09-roles
+ * REASONING DEPTHS:
+ * - Minimum proof steps: 3
+ * - Maximum proof steps: 6
+ * - Target average: 4-5
  */
 
 export const name = 'Basic Facts and Queries';
-export const description = 'Learn facts progressively, then query and prove them';
+export const description = 'Multi-step reasoning with deep taxonomic hierarchies';
 
 export const theories = [
   '00-types.sys2',
-  '05-logic.sys2',
-  '09-roles.sys2'
+  '05-logic.sys2'
 ];
 
 export const steps = [
-  // === PHASE 1: Learn animal taxonomy ===
+  // === PHASE 1: Build 6-level animal hierarchy ===
+  // Entity -> LivingThing -> Animal -> Mammal -> Canine -> Dog
   {
     action: 'learn',
-    input_nl: `A dog is an animal. A cat is an animal. A bird is an animal.
-               A fish is an animal. Mammals are animals.`,
+    input_nl: 'Build deep animal taxonomy: Entity > LivingThing > Animal > Mammal > Canine > Dog',
     input_dsl: `
-      isA Dog Animal
-      isA Cat Animal
-      isA Bird Animal
-      isA Fish Animal
+      isA LivingThing Entity
+      isA Animal LivingThing
       isA Mammal Animal
+      isA Canine Mammal
+      isA Feline Mammal
+      isA Dog Canine
+      isA Cat Feline
     `,
-    expected_nl: 'Learned 5 facts'
+    expected_nl: 'Learned 7 facts'
   },
 
-  // === PHASE 2: Learn specific instances ===
+  // === PHASE 2: Add instances at bottom of hierarchy ===
   {
     action: 'learn',
-    input_nl: `Rex is a dog. Whiskers is a cat. Tweety is a bird.
-               Nemo is a fish. Dumbo is a mammal.`,
+    input_nl: 'Rex is a dog. Whiskers is a cat.',
     input_dsl: `
       isA Rex Dog
       isA Whiskers Cat
-      isA Tweety Bird
-      isA Nemo Fish
-      isA Dumbo Mammal
     `,
-    expected_nl: 'Learned 5 facts'
+    expected_nl: 'Learned 2 facts'
   },
 
-  // === PHASE 3: Query - what is Rex? ===
+  // === PHASE 3: Query direct fact (OK for queries) ===
   {
     action: 'query',
     input_nl: 'What is Rex?',
@@ -55,157 +55,169 @@ export const steps = [
     expected_nl: 'Rex is a dog'
   },
 
-  // === PHASE 4: Query - what is Whiskers? ===
-  {
-    action: 'query',
-    input_nl: 'What is Whiskers?',
-    input_dsl: '@q isA Whiskers ?what',
-    expected_nl: 'Whiskers is a cat'
-  },
-
-  // === PHASE 5: Prove direct fact ===
+  // === PHASE 4: Prove 3-step transitive ===
+  // CHAIN: Rex -> Dog -> Canine -> Mammal (3 hops)
   {
     action: 'prove',
-    input_nl: 'Is Rex a dog?',
-    input_dsl: '@goal isA Rex Dog',
-    expected_nl: 'Yes, Rex is a dog'
+    input_nl: 'Is Rex a mammal?',
+    input_dsl: '@goal isA Rex Mammal',
+    expected_nl: 'True: Rex is a mammal. Proof: Rex is a dog. Dog is a canine. Canine is a mammal.'
   },
 
-  // === PHASE 6: Learn properties ===
-  {
-    action: 'learn',
-    input_nl: `The sky is blue. The grass is green. Snow is white.
-               Fire is hot. Ice is cold.`,
-    input_dsl: `
-      hasProperty Sky blue
-      hasProperty Grass green
-      hasProperty Snow white
-      hasProperty Fire hot
-      hasProperty Ice cold
-    `,
-    expected_nl: 'Learned 5 facts'
-  },
-
-  // === PHASE 7: Query property ===
-  {
-    action: 'query',
-    input_nl: 'What color is the sky?',
-    input_dsl: '@q hasProperty Sky ?color',
-    expected_nl: 'The sky is blue'
-  },
-
-  // === PHASE 8: Learn relationships ===
-  {
-    action: 'learn',
-    input_nl: `John loves Mary. Mary loves John. Alice knows Bob.
-               Bob knows Alice. Peter helps Sarah.`,
-    input_dsl: `
-      love John Mary
-      love Mary John
-      know Alice Bob
-      know Bob Alice
-      help Peter Sarah
-    `,
-    expected_nl: 'Learned 5 facts'
-  },
-
-  // === PHASE 9: Query relationship ===
-  {
-    action: 'query',
-    input_nl: 'Who does John love?',
-    input_dsl: '@q love John ?who',
-    expected_nl: 'John loves Mary'
-  },
-
-  // === PHASE 10: Prove relationship ===
+  // === PHASE 5: Prove 4-step transitive ===
+  // CHAIN: Rex -> Dog -> Canine -> Mammal -> Animal (4 hops)
   {
     action: 'prove',
-    input_nl: 'Does John love Mary?',
-    input_dsl: '@goal love John Mary',
-    expected_nl: 'Yes, John loves Mary'
+    input_nl: 'Is Rex an animal?',
+    input_dsl: '@goal isA Rex Animal',
+    expected_nl: 'True: Rex is an animal. Proof: Rex is a dog. Dog is a canine. Canine is a mammal. Mammal is an animal.'
   },
 
-  // === PHASE 11: Learn locations ===
+  // === PHASE 6: Prove 5-step transitive ===
+  // CHAIN: Rex -> Dog -> Canine -> Mammal -> Animal -> LivingThing (5 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is Rex a living thing?',
+    input_dsl: '@goal isA Rex LivingThing',
+    expected_nl: 'True: Rex is a livingthing. Proof: Rex is a dog. Dog is a canine. Canine is a mammal. Mammal is an animal. Animal is a livingthing.'
+  },
+
+  // === PHASE 7: Prove 6-step transitive (max depth) ===
+  // CHAIN: Rex -> Dog -> Canine -> Mammal -> Animal -> LivingThing -> Entity (6 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is Rex an entity?',
+    input_dsl: '@goal isA Rex Entity',
+    expected_nl: 'True: Rex is an entity. Proof: Rex is a dog. Dog is a canine. Canine is a mammal. Mammal is an animal. Animal is a livingthing. LivingThing is an entity.'
+  },
+
+  // === PHASE 8: Build 6-level location hierarchy ===
+  // Earth -> Continent -> Country -> Region -> City -> Landmark
   {
     action: 'learn',
-    input_nl: `Paris is in France. France is in Europe.
-               London is in England. Tokyo is in Japan.`,
+    input_nl: 'Build deep location hierarchy',
     input_dsl: `
-      locatedIn Paris France
+      locatedIn Europe Earth
       locatedIn France Europe
-      locatedIn London England
-      locatedIn Tokyo Japan
+      locatedIn IleDeFrance France
+      locatedIn Paris IleDeFrance
+      locatedIn Montmartre Paris
+      locatedIn SacreCoeur Montmartre
     `,
-    expected_nl: 'Learned 4 facts'
+    expected_nl: 'Learned 6 facts'
   },
 
-  // === PHASE 12: Query location ===
+  // === PHASE 9: Query location (direct) ===
   {
     action: 'query',
-    input_nl: 'Where is Paris?',
-    input_dsl: '@q locatedIn Paris ?where',
-    expected_nl: 'Paris is in France'
+    input_nl: 'Where is Sacre Coeur?',
+    input_dsl: '@q locatedIn SacreCoeur ?where',
+    expected_nl: 'SacreCoeur is in Montmartre'
   },
 
-  // === PHASE 13: Learn ownership ===
-  {
-    action: 'learn',
-    input_nl: `John has a car. Alice has a house. Bob has a book.
-               Mary has a garden.`,
-    input_dsl: `
-      has John Car
-      has Alice House
-      has Bob Book
-      has Mary Garden
-    `,
-    expected_nl: 'Learned 4 facts'
-  },
-
-  // === PHASE 14: Query ownership ===
-  {
-    action: 'query',
-    input_nl: 'What does John have?',
-    input_dsl: '@q has John ?what',
-    expected_nl: 'John has a car'
-  },
-
-  // === PHASE 15: Learn roles ===
-  {
-    action: 'learn',
-    input_nl: `John is a student. Mary is a teacher. Bob is a doctor.
-               Alice is an engineer. Peter is a lawyer.`,
-    input_dsl: `
-      isA John Student
-      isA Mary Teacher
-      isA Bob Doctor
-      isA Alice Engineer
-      isA Peter Lawyer
-    `,
-    expected_nl: 'Learned 5 facts'
-  },
-
-  // === PHASE 16: Query role ===
-  {
-    action: 'query',
-    input_nl: 'What is John?',
-    input_dsl: '@q isA John ?role',
-    expected_nl: 'John is a student'
-  },
-
-  // === PHASE 17: Prove role ===
+  // === PHASE 10: Prove 3-step location ===
+  // CHAIN: SacreCoeur -> Montmartre -> Paris -> IleDeFrance (3 hops)
   {
     action: 'prove',
-    input_nl: 'Is Mary a teacher?',
-    input_dsl: '@goal isA Mary Teacher',
-    expected_nl: 'Yes, Mary is a teacher'
+    input_nl: 'Is Sacre Coeur in Ile-de-France?',
+    input_dsl: '@goal locatedIn SacreCoeur IleDeFrance',
+    expected_nl: 'True: SacreCoeur is in IleDeFrance. Proof: SacreCoeur is in Montmartre. Montmartre is in Paris. Paris is in IleDeFrance.'
   },
 
-  // === PHASE 18: Query multiple animals ===
+  // === PHASE 11: Prove 4-step location ===
+  // CHAIN: SacreCoeur -> Montmartre -> Paris -> IleDeFrance -> France (4 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is Sacre Coeur in France?',
+    input_dsl: '@goal locatedIn SacreCoeur France',
+    expected_nl: 'True: SacreCoeur is in France. Proof: SacreCoeur is in Montmartre. Montmartre is in Paris. Paris is in IleDeFrance. IleDeFrance is in France.'
+  },
+
+  // === PHASE 12: Prove 5-step location ===
+  // CHAIN: SacreCoeur -> Montmartre -> Paris -> IleDeFrance -> France -> Europe (5 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is Sacre Coeur in Europe?',
+    input_dsl: '@goal locatedIn SacreCoeur Europe',
+    expected_nl: 'True: SacreCoeur is in Europe. Proof: SacreCoeur is in Montmartre. Montmartre is in Paris. Paris is in IleDeFrance. IleDeFrance is in France. France is in Europe.'
+  },
+
+  // === PHASE 13: Prove 6-step location (max depth) ===
+  // CHAIN: SacreCoeur -> ... -> Earth (6 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is Sacre Coeur on Earth?',
+    input_dsl: '@goal locatedIn SacreCoeur Earth',
+    expected_nl: 'True: SacreCoeur is in Earth. Proof: SacreCoeur is in Montmartre. Montmartre is in Paris. Paris is in IleDeFrance. IleDeFrance is in France. France is in Europe. Europe is in Earth.'
+  },
+
+  // === PHASE 14: Build role hierarchy with rules ===
+  {
+    action: 'learn',
+    input_nl: 'Person > Professional > Educator > Teacher. Teachers educate students.',
+    input_dsl: `
+      isA Professional Person
+      isA Educator Professional
+      isA Teacher Educator
+      isA Mary Teacher
+      @eduCond isA Mary Teacher
+      @eduConc educates Mary Students
+      @eduRule Implies $eduCond $eduConc
+    `,
+    expected_nl: 'Learned 7 facts'
+  },
+
+  // === PHASE 15: Prove 3-step role hierarchy ===
+  // CHAIN: Mary -> Teacher -> Educator -> Professional (3 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is Mary a professional?',
+    input_dsl: '@goal isA Mary Professional',
+    expected_nl: 'True: Mary is a professional. Proof: Mary is a teacher. Teacher is an educator. Educator is a professional.'
+  },
+
+  // === PHASE 16: Prove 4-step role hierarchy ===
+  // CHAIN: Mary -> Teacher -> Educator -> Professional -> Person (4 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is Mary a person?',
+    input_dsl: '@goal isA Mary Person',
+    expected_nl: 'True: Mary is a person. Proof: Mary is a teacher. Teacher is an educator. Educator is a professional. Professional is a person.'
+  },
+
+  // === PHASE 17: Prove via rule chain ===
+  // CHAIN: Mary is Teacher + rule => Mary educates Students
+  {
+    action: 'prove',
+    input_nl: 'Does Mary educate students?',
+    input_dsl: '@goal educates Mary Students',
+    expected_nl: 'True: Mary educates Students'
+  },
+
+  // === PHASE 18: Cross-branch negative proof ===
+  // Whiskers -> Feline -> Mammal (not Canine branch)
+  {
+    action: 'prove',
+    input_nl: 'Is Whiskers a canine?',
+    input_dsl: '@goal isA Whiskers Canine',
+    expected_nl: 'Cannot prove: Whiskers is a canine'
+  },
+
+  // === PHASE 19: Prove different branch 4-step ===
+  // CHAIN: Whiskers -> Cat -> Feline -> Mammal -> Animal (4 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is Whiskers an animal?',
+    input_dsl: '@goal isA Whiskers Animal',
+    expected_nl: 'True: Whiskers is an animal. Proof: Whiskers is a cat. Cat is a feline. Feline is a mammal. Mammal is an animal.'
+  },
+
+  // === PHASE 20: Query hierarchy ===
   {
     action: 'query',
-    input_nl: 'What things are animals?',
-    input_dsl: '@q isA ?what Animal',
-    expected_nl: 'Dog is an animal'
+    input_nl: 'What things are mammals?',
+    input_dsl: '@q isA ?what Mammal',
+    expected_nl: 'Canine is a mammal'
   }
 ];
 

@@ -1,0 +1,76 @@
+# Geographic Containment Theory
+# Defines spatial containment hierarchy for transitive locatedIn
+# Tests multi-step reasoning: Building -> City -> Region -> Country -> Continent -> Planet
+
+# === Continental Structure ===
+# Continents are a type - members are mutually disjoint
+isA Europe Continent
+isA Asia Continent
+isA NorthAmerica Continent
+isA SouthAmerica Continent
+isA Africa Continent
+
+# Continents are mutually disjoint (smart rule)
+mutuallyDisjoint Continent
+
+locatedIn Europe Earth
+locatedIn Asia Earth
+locatedIn NorthAmerica Earth
+locatedIn SouthAmerica Earth
+locatedIn Africa Earth
+
+# === Country in Continent (Level 1) ===
+locatedIn France Europe
+locatedIn Germany Europe
+locatedIn Italy Europe
+locatedIn Spain Europe
+locatedIn UK Europe
+locatedIn Japan Asia
+locatedIn China Asia
+locatedIn USA NorthAmerica
+locatedIn Brazil SouthAmerica
+locatedIn Egypt Africa
+
+# === Region in Country (Level 2) ===
+locatedIn IleDeFrance France
+locatedIn Provence France
+locatedIn Bavaria Germany
+locatedIn Tuscany Italy
+locatedIn Catalonia Spain
+locatedIn England UK
+locatedIn Scotland UK
+locatedIn Kanto Japan
+locatedIn California USA
+locatedIn Texas USA
+
+# === City in Region (Level 3) ===
+locatedIn Paris IleDeFrance
+locatedIn Marseille Provence
+locatedIn Munich Bavaria
+locatedIn Florence Tuscany
+locatedIn Barcelona Catalonia
+locatedIn London England
+locatedIn Edinburgh Scotland
+locatedIn Tokyo Kanto
+locatedIn SanFrancisco California
+locatedIn Houston Texas
+
+# === District in City (Level 4) ===
+locatedIn Montmartre Paris
+locatedIn LatinQuarter Paris
+locatedIn Westminster London
+locatedIn Chelsea London
+locatedIn Shibuya Tokyo
+locatedIn Shinjuku Tokyo
+
+# === Landmark in District (Level 5) ===
+locatedIn SacreCoeur Montmartre
+locatedIn MoulinRouge Montmartre
+locatedIn Sorbonne LatinQuarter
+locatedIn BigBen Westminster
+locatedIn BuckinghamPalace Westminster
+locatedIn ShibuyaCrossing Shibuya
+
+# === Room in Landmark (Level 6) ===
+locatedIn ThronRoom BuckinghamPalace
+locatedIn BallRoom BuckinghamPalace

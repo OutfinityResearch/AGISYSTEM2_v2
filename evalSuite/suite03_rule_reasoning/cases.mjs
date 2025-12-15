@@ -1,224 +1,235 @@
 /**
- * Suite 03 - Rule Reasoning and Inference
+ * Suite 03 - Rule-Based Reasoning
  *
- * A conversation about rules and deduction.
- * Tests: learn rules (Implies) → prove derived facts → explain chains
+ * Tests multi-step rule chains and combined reasoning.
+ * All prove actions require 3-6 reasoning steps.
  *
- * Core theories: 05-logic (Implies, ForAll), 12-reasoning (deduce)
+ * REASONING DEPTHS:
+ * - Minimum proof steps: 3
+ * - Maximum proof steps: 7
+ * - Combines transitive + rule chains
  */
 
-export const name = 'Rule Reasoning and Inference';
-export const description = 'Learn rules progressively, then prove derived conclusions';
+export const name = 'Structured Knowledge';
+export const description = 'Multi-step rule chains and combined reasoning';
 
 export const theories = [
   '05-logic.sys2',
-  '12-reasoning.sys2'
+  '09-roles.sys2'
 ];
 
 export const steps = [
-  // === PHASE 1: Learn base rule - humans are mortal ===
+  // === PHASE 1: Build 6-level profession hierarchy ===
+  // Role -> Professional -> Medical -> Doctor
   {
     action: 'learn',
-    input_nl: 'All humans are mortal. This is a universal truth.',
+    input_nl: 'Build profession hierarchy with rules',
     input_dsl: `
-      @cond1 isA ?x Human
-      @conc1 isA ?x Mortal
-      @r1 Implies $cond1 $conc1
+      isA Role Concept
+      isA Professional Role
+      isA Medical Professional
+      isA Doctor Medical
+      isA Surgeon Doctor
+      isA Socrates Philosopher
+      isA Philosopher Thinker
+      isA Thinker Human
+      isA Human Mortal
+      isA Mortal Being
     `,
-    expected_nl: 'Learned 1 rule'
+    expected_nl: 'Learned 10 facts'
   },
 
-  // === PHASE 2: Learn instances ===
+  // === PHASE 2: Query Socrates direct ===
   {
-    action: 'learn',
-    input_nl: 'Socrates is a human. Plato is a human. Aristotle is a human.',
-    input_dsl: `
-      @f1 isA Socrates Human
-      @f2 isA Plato Human
-      @f3 isA Aristotle Human
-    `,
-    expected_nl: 'Learned 3 facts'
+    action: 'query',
+    input_nl: 'What is Socrates?',
+    input_dsl: '@q isA Socrates ?what',
+    expected_nl: 'Socrates is a philosopher'
   },
 
-  // === PHASE 3: Prove Socrates is mortal ===
+  // === PHASE 3: Prove 3-step transitive ===
+  // CHAIN: Socrates -> Philosopher -> Thinker -> Human (3 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is Socrates human?',
+    input_dsl: '@goal isA Socrates Human',
+    expected_nl: 'True: Socrates is a human. Proof: Socrates is a philosopher. Philosopher is a thinker. Thinker is a human.'
+  },
+
+  // === PHASE 4: Prove 4-step transitive ===
+  // CHAIN: Socrates -> Philosopher -> Thinker -> Human -> Mortal (4 hops)
   {
     action: 'prove',
     input_nl: 'Is Socrates mortal?',
     input_dsl: '@goal isA Socrates Mortal',
-    expected_nl: 'Yes. Socrates is human and all humans are mortal, therefore Socrates is mortal.'
+    expected_nl: 'True: Socrates is a mortal. Proof: Socrates is a philosopher. Philosopher is a thinker. Thinker is a human. Human is a mortal.'
   },
 
-  // === PHASE 4: Learn animal taxonomy rules ===
-  {
-    action: 'learn',
-    input_nl: 'All dogs are mammals. All mammals are animals. All birds are animals.',
-    input_dsl: `
-      @c2 isA ?x Dog
-      @t2 isA ?x Mammal
-      @r2 Implies $c2 $t2
-      @c3 isA ?x Mammal
-      @t3 isA ?x Animal
-      @r3 Implies $c3 $t3
-      @c4 isA ?x Bird
-      @t4 isA ?x Animal
-      @r4 Implies $c4 $t4
-    `,
-    expected_nl: 'Learned 3 rules'
-  },
-
-  // === PHASE 5: Learn animal instances ===
-  {
-    action: 'learn',
-    input_nl: 'Fido is a dog. Rex is a dog. Spot is a dog. Tweety is a bird.',
-    input_dsl: `
-      @f4 isA Fido Dog
-      @f5 isA Rex Dog
-      @f6 isA Spot Dog
-      @f7 isA Tweety Bird
-    `,
-    expected_nl: 'Learned 4 facts'
-  },
-
-  // === PHASE 6: Prove Fido is a mammal ===
+  // === PHASE 5: Prove 5-step transitive (classic syllogism extended) ===
+  // CHAIN: Socrates -> Philosopher -> Thinker -> Human -> Mortal -> Being (5 hops)
   {
     action: 'prove',
-    input_nl: 'Is Fido a mammal?',
-    input_dsl: '@goal isA Fido Mammal',
-    expected_nl: 'Yes. Fido is a dog and all dogs are mammals, therefore Fido is a mammal.'
+    input_nl: 'Is Socrates a being?',
+    input_dsl: '@goal isA Socrates Being',
+    expected_nl: 'True: Socrates is a being. Proof: Socrates is a philosopher. Philosopher is a thinker. Thinker is a human. Human is a mortal. Mortal is a being.'
   },
 
-  // === PHASE 7: Prove Fido is an animal (2 steps) ===
+  // === PHASE 6: Add medical professionals with rule chains ===
+  {
+    action: 'learn',
+    input_nl: 'Dr Smith is a surgeon. Surgeons operate. If someone operates, they save lives.',
+    input_dsl: `
+      isA DrSmith Surgeon
+      @opCond isA DrSmith Surgeon
+      @opConc operates DrSmith
+      @opRule Implies $opCond $opConc
+      @saveCond operates DrSmith
+      @saveConc savesLives DrSmith
+      @saveRule Implies $saveCond $saveConc
+    `,
+    expected_nl: 'Learned 7 facts'
+  },
+
+  // === PHASE 7: Prove 3-step hierarchy ===
+  // CHAIN: DrSmith -> Surgeon -> Doctor -> Medical (3 hops)
   {
     action: 'prove',
-    input_nl: 'Is Fido an animal?',
-    input_dsl: '@goal isA Fido Animal',
-    expected_nl: 'Yes. Fido is a dog. Dogs are mammals. Mammals are animals. Therefore Fido is an animal.'
+    input_nl: 'Is Dr Smith in medical field?',
+    input_dsl: '@goal isA DrSmith Medical',
+    expected_nl: 'True: DrSmith is a medical. Proof: DrSmith is a surgeon. Surgeon is a doctor. Doctor is a medical.'
   },
 
-  // === PHASE 8: Learn conditional weather rule ===
+  // === PHASE 8: Prove 4-step hierarchy ===
+  // CHAIN: DrSmith -> Surgeon -> Doctor -> Medical -> Professional (4 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is Dr Smith a professional?',
+    input_dsl: '@goal isA DrSmith Professional',
+    expected_nl: 'True: DrSmith is a professional. Proof: DrSmith is a surgeon. Surgeon is a doctor. Doctor is a medical. Medical is a professional.'
+  },
+
+  // === PHASE 9: Prove rule chain 2-step ===
+  // CHAIN: Surgeon + rule => operates
+  {
+    action: 'prove',
+    input_nl: 'Does Dr Smith operate?',
+    input_dsl: '@goal operates DrSmith',
+    expected_nl: 'True: DrSmith is operates'
+  },
+
+  // === PHASE 10: Prove rule chain 3-step ===
+  // CHAIN: Surgeon -> operates -> savesLives (2 rules)
+  {
+    action: 'prove',
+    input_nl: 'Does Dr Smith save lives?',
+    input_dsl: '@goal savesLives DrSmith',
+    expected_nl: 'True: DrSmith is savesLives'
+  },
+
+  // === PHASE 11: Build weather reasoning chain ===
   {
     action: 'learn',
-    input_nl: 'If it rains then the ground is wet. If the ground is wet then plants grow.',
+    input_nl: 'Clouds -> Rain -> WetGround -> SlipperyRoad -> DangerousDriving',
     input_dsl: `
-      @wcond hasProperty Weather Rain
-      @wconc hasProperty Ground Wet
-      @r5 Implies $wcond $wconc
-      @gcond hasProperty Ground Wet
-      @gconc do Plants Grow
-      @r6 Implies $gcond $gconc
+      hasProperty Weather Clouds
+      @r1c hasProperty Weather Clouds
+      @r1n hasProperty Weather Rain
+      @r1 Implies $r1c $r1n
+      @r2c hasProperty Weather Rain
+      @r2n hasProperty Ground Wet
+      @r2 Implies $r2c $r2n
+      @r3c hasProperty Ground Wet
+      @r3n hasProperty Road Slippery
+      @r3 Implies $r3c $r3n
+      @r4c hasProperty Road Slippery
+      @r4n hasProperty Driving Dangerous
+      @r4 Implies $r4c $r4n
     `,
-    expected_nl: 'Learned 2 rules'
+    expected_nl: 'Learned 13 facts'
   },
 
-  // === PHASE 9: Learn weather state ===
+  // === PHASE 12: Prove 2-step weather chain ===
+  // CHAIN: Clouds + rule => Rain
   {
-    action: 'learn',
-    input_nl: 'It rains today. The sky is cloudy. The temperature is cold.',
-    input_dsl: `
-      @w1 hasProperty Weather Rain
-      @w2 hasProperty Sky Cloudy
-      @w3 hasProperty Temperature Cold
-    `,
-    expected_nl: 'Learned 3 facts'
+    action: 'prove',
+    input_nl: 'Is it raining?',
+    input_dsl: '@goal hasProperty Weather Rain',
+    expected_nl: 'True: Weather is rain'
   },
 
-  // === PHASE 10: Prove ground is wet ===
+  // === PHASE 13: Prove 3-step weather chain ===
+  // CHAIN: Clouds -> Rain -> WetGround (2 rules)
   {
     action: 'prove',
     input_nl: 'Is the ground wet?',
     input_dsl: '@goal hasProperty Ground Wet',
-    expected_nl: 'Yes. It rains and if it rains then the ground is wet.'
+    expected_nl: 'True: Ground is wet'
   },
 
-  // === PHASE 11: Query professional role ===
-  {
-    action: 'learn',
-    input_nl: 'Doctors heal patients. John is a doctor. Mary is a lawyer.',
-    input_dsl: `
-      @pcond isA ?x Doctor
-      @pconc heal ?x Patient
-      @r7 Implies $pcond $pconc
-      @f8 isA John Doctor
-      @f9 isA Mary Lawyer
-    `,
-    expected_nl: 'Learned 1 rule, 2 facts'
-  },
-
-  // === PHASE 12: Query John's role ===
-  {
-    action: 'query',
-    input_nl: 'What is John?',
-    input_dsl: '@q isA John ?what',
-    expected_nl: 'John is a doctor'
-  },
-
-  // === PHASE 13: Learn student rules ===
-  {
-    action: 'learn',
-    input_nl: 'All students study hard. All hard workers succeed. Alice is a student. Bob is a student.',
-    input_dsl: `
-      @scond isA ?x Student
-      @sconc do ?x StudyHard
-      @r8 Implies $scond $sconc
-      @hcond do ?x StudyHard
-      @hconc will ?x Succeed
-      @r9 Implies $hcond $hconc
-      @f10 isA Alice Student
-      @f11 isA Bob Student
-    `,
-    expected_nl: 'Learned 2 rules, 2 facts'
-  },
-
-  // === PHASE 14: Query Alice's status ===
-  {
-    action: 'query',
-    input_nl: 'What is Alice?',
-    input_dsl: '@q isA Alice ?what',
-    expected_nl: 'Alice is a student'
-  },
-
-  // === PHASE 15: Learn cat taxonomy ===
-  {
-    action: 'learn',
-    input_nl: 'All cats are felines. All felines are mammals. Whiskers is a cat.',
-    input_dsl: `
-      @ccond isA ?x Cat
-      @cconc isA ?x Feline
-      @r10 Implies $ccond $cconc
-      @fcond isA ?x Feline
-      @fconc isA ?x Mammal
-      @r11 Implies $fcond $fconc
-      @f12 isA Whiskers Cat
-    `,
-    expected_nl: 'Learned 2 rules, 1 fact'
-  },
-
-  // === PHASE 16: Prove Whiskers is feline ===
+  // === PHASE 14: Prove 4-step weather chain ===
+  // CHAIN: Clouds -> Rain -> Wet -> Slippery (3 rules)
   {
     action: 'prove',
-    input_nl: 'Is Whiskers a feline?',
-    input_dsl: '@goal isA Whiskers Feline',
-    expected_nl: 'Yes. Whiskers is a cat and all cats are felines.'
+    input_nl: 'Is the road slippery?',
+    input_dsl: '@goal hasProperty Road Slippery',
+    expected_nl: 'True: Road is slippery'
   },
 
-  // === PHASE 17: Learn warm-blooded rule ===
-  {
-    action: 'learn',
-    input_nl: 'All mammals are warm-blooded.',
-    input_dsl: `
-      @mcond isA ?x Mammal
-      @mconc hasProperty ?x WarmBlooded
-      @r12 Implies $mcond $mconc
-    `,
-    expected_nl: 'Learned 1 rule'
-  },
-
-  // === PHASE 18: Prove Rex is mammal (multi-step) ===
+  // === PHASE 15: Prove 5-step weather chain (full chain) ===
+  // CHAIN: Clouds -> Rain -> Wet -> Slippery -> Dangerous (4 rules)
   {
     action: 'prove',
-    input_nl: 'Is Rex a mammal?',
-    input_dsl: '@goal isA Rex Mammal',
-    expected_nl: 'Yes. Rex is a dog. Dogs are mammals. Therefore Rex is a mammal.'
+    input_nl: 'Is driving dangerous?',
+    input_dsl: '@goal hasProperty Driving Dangerous',
+    expected_nl: 'True: Driving is dangerous'
+  },
+
+  // === PHASE 16: Cross-branch negative ===
+  {
+    action: 'prove',
+    input_nl: 'Is DrSmith a thinker?',
+    input_dsl: '@goal isA DrSmith Thinker',
+    expected_nl: 'Cannot prove: DrSmith is a thinker'
+  },
+
+  // === PHASE 17: Build student hierarchy ===
+  {
+    action: 'learn',
+    input_nl: 'Entity > Person > Student > GradStudent > PhDStudent',
+    input_dsl: `
+      isA Person Entity
+      isA Student Person
+      isA GradStudent Student
+      isA PhDStudent GradStudent
+      isA Alice PhDStudent
+    `,
+    expected_nl: 'Learned 5 facts'
+  },
+
+  // === PHASE 18: Prove 4-step student hierarchy ===
+  // CHAIN: Alice -> PhDStudent -> GradStudent -> Student -> Person (4 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is Alice a person?',
+    input_dsl: '@goal isA Alice Person',
+    expected_nl: 'True: Alice is a person. Proof: Alice is a phdstudent. PhDStudent is a gradstudent. GradStudent is a student. Student is a person.'
+  },
+
+  // === PHASE 19: Prove 5-step student hierarchy ===
+  // CHAIN: Alice -> PhDStudent -> GradStudent -> Student -> Person -> Entity (5 hops)
+  {
+    action: 'prove',
+    input_nl: 'Is Alice an entity?',
+    input_dsl: '@goal isA Alice Entity',
+    expected_nl: 'True: Alice is an entity. Proof: Alice is a phdstudent. PhDStudent is a gradstudent. GradStudent is a student. Student is a person. Person is an entity.'
+  },
+
+  // === PHASE 20: Query hierarchy ===
+  {
+    action: 'query',
+    input_nl: 'What is a professional?',
+    input_dsl: '@q isA ?what Professional',
+    expected_nl: 'Medical is a professional'
   }
 ];
 

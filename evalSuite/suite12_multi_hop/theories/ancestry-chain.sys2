@@ -1,0 +1,64 @@
+# Ancestry Chain Theory
+# Deep family tree for 10-hop reasoning tests
+# greatN-grandparent relationships
+
+# === Generation 0 (root) ===
+isA Adam Ancestor
+isA Eve Ancestor
+
+# === Generation 1 ===
+isParentOf Adam Cain
+isParentOf Eve Cain
+isParentOf Adam Abel
+isParentOf Eve Abel
+isParentOf Adam Seth
+isParentOf Eve Seth
+
+# === Generation 2 ===
+isParentOf Seth Enosh
+
+# === Generation 3 ===
+isParentOf Enosh Kenan
+
+# === Generation 4 ===
+isParentOf Kenan Mahalalel
+
+# === Generation 5 ===
+isParentOf Mahalalel Jared
+
+# === Generation 6 ===
+isParentOf Jared Enoch
+
+# === Generation 7 ===
+isParentOf Enoch Methuselah
+
+# === Generation 8 ===
+isParentOf Methuselah Lamech
+
+# === Generation 9 ===
+isParentOf Lamech Noah
+
+# === Generation 10 ===
+isParentOf Noah Shem
+isParentOf Noah Ham
+isParentOf Noah Japheth
+
+# === Ancestry rules ===
+# Parent is ancestor (base case)
+@ancestorBase Implies (isParentOf $X $Y) (isAncestorOf $X $Y)
+
+# Ancestor of ancestor is ancestor (transitive)
+@ancestorTrans Implies (And (isAncestorOf $X $Y) (isAncestorOf $Y $Z)) (isAncestorOf $X $Z)
+
+# === Descendant rules ===
+@descendantBase Implies (isParentOf $X $Y) (isDescendantOf $Y $X)
+@descendantTrans Implies (And (isDescendantOf $X $Y) (isDescendantOf $Y $Z)) (isDescendantOf $X $Z)
+
+# === Generation counting ===
+# Distance in generations
+@gen1 Implies (isParentOf $X $Y) (generationGap $X $Y 1)
+@genN Implies (And (isParentOf $X $Y) (generationGap $Y $Z $N)) (generationGap $X $Z (+ $N 1))
+
+# === Named relationships ===
+@grandparent Implies (And (isParentOf $X $Y) (isParentOf $Y $Z)) (isGrandparentOf $X $Z)
+@greatGrandparent Implies (And (isGrandparentOf $X $Y) (isParentOf $Y $Z)) (isGreatGrandparentOf $X $Z)

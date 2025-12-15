@@ -107,11 +107,11 @@ export class ProofEngine {
     let bestMatch = null;
     let bestSim = 0;
 
-    for (const factVec of this.session.kbFacts) {
-      const sim = similarity(goalVector, factVec);
+    for (const fact of this.session.kbFacts) {
+      const sim = similarity(goalVector, fact.vector);
       if (sim > bestSim) {
         bestSim = sim;
-        bestMatch = factVec;
+        bestMatch = fact;
       }
     }
 

@@ -1,0 +1,72 @@
+# Causal Chains Theory
+# Rules for backward chaining tests
+
+# === Weather Chain ===
+# rain -> wet -> slippery -> dangerous
+@r1cond hasProperty Weather Rain
+@r1conc hasProperty Ground Wet
+@r1:weatherWet Implies $r1cond $r1conc
+
+@r2cond hasProperty Ground Wet
+@r2conc hasProperty Ground Slippery
+@r2:wetSlippery Implies $r2cond $r2conc
+
+@r3cond hasProperty Ground Slippery
+@r3conc hasProperty Driving Dangerous
+@r3:slipperyDanger Implies $r3cond $r3conc
+
+# === Fire Chain ===
+# spark+fuel -> fire -> smoke -> alarm -> evacuate
+@spark present Spark
+@fuel present Fuel
+@f1cond And $spark $fuel
+@f1conc present Fire
+@f1:sparkFire Implies $f1cond $f1conc
+
+@f2cond present Fire
+@f2conc present Smoke
+@f2:fireSmoke Implies $f2cond $f2conc
+
+@f3cond present Smoke
+@f3conc triggered Alarm
+@f3:smokeAlarm Implies $f3cond $f3conc
+
+@f4cond triggered Alarm
+@f4conc action Evacuate
+@f4:alarmEvac Implies $f4cond $f4conc
+
+# === Economic Chain ===
+# low rates -> borrowing -> investment -> growth -> prosperity
+@e1cond hasProperty InterestRates Low
+@e1conc hasProperty Borrowing High
+@e1:ratesBorrow Implies $e1cond $e1conc
+
+@e2cond hasProperty Borrowing High
+@e2conc hasProperty Investment High
+@e2:borrowInvest Implies $e2cond $e2conc
+
+@e3cond hasProperty Investment High
+@e3conc hasProperty Economy Growing
+@e3:investGrow Implies $e3cond $e3conc
+
+@e4cond hasProperty Economy Growing
+@e4conc hasState Economy Prosperous
+@e4:growProsp Implies $e4cond $e4conc
+
+# === Health Chain ===
+# virus -> infection -> fever -> weakness -> bed rest
+@h1cond exposed Person Virus
+@h1conc hasState Person Infected
+@h1:virusInfect Implies $h1cond $h1conc
+
+@h2cond hasState Person Infected
+@h2conc hasState Person Fever
+@h2:infectFever Implies $h2cond $h2conc
+
+@h3cond hasState Person Fever
+@h3conc hasState Person Weak
+@h3:feverWeak Implies $h3cond $h3conc
+
+@h4cond hasState Person Weak
+@h4conc recommend BedRest
+@h4:weakRest Implies $h4cond $h4conc

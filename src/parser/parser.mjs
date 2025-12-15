@@ -31,7 +31,8 @@ export class ParseError extends Error {
 
 export class Parser {
   constructor(tokens) {
-    this.tokens = tokens.filter(t => t.type !== TOKEN_TYPES.NEWLINE);
+    // Keep NEWLINE tokens - they separate statements
+    this.tokens = tokens;
     this.pos = 0;
   }
 
@@ -41,12 +42,30 @@ export class Parser {
    */
   parse() {
     const statements = [];
+    let maxIterations = this.tokens.length * 2;  // Safety limit
 
-    while (!this.isEof()) {
+    while (!this.isEof() && maxIterations-- > 0) {
+      // Skip leading newlines
+      this.skipNewlines();
+      if (this.isEof()) break;
+
+      const startPos = this.pos;
       const stmt = this.parseTopLevel();
       if (stmt) {
         statements.push(stmt);
       }
+
+      // SAFETY: If we didn't advance, we hit an unrecognized token - throw error
+      if (this.pos === startPos && !this.isEof()) {
+        const badToken = this.peek();
+        throw new ParseError(
+          `Unexpected token '${badToken.value || badToken.type}'`,
+          badToken
+        );
+      }
+
+      // Skip trailing newlines after statement
+      this.skipNewlines();
     }
 
     return new Program(statements);
@@ -278,8 +297,18 @@ export class Parser {
   isStatementEnd() {
     const token = this.peek();
     return token.type === TOKEN_TYPES.EOF ||
+           token.type === TOKEN_TYPES.NEWLINE ||
            token.type === TOKEN_TYPES.KEYWORD ||
            token.type === TOKEN_TYPES.RBRACKET;
+  }
+
+  /**
+   * Skip any newline tokens
+   */
+  skipNewlines() {
+    while (this.check(TOKEN_TYPES.NEWLINE)) {
+      this.advance();
+    }
   }
 
   // Token navigation helpers

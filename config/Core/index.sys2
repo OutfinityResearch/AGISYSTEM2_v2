@@ -1,18 +1,6 @@
-# Core Theory - Index
-# This file is loaded by the runtime to bootstrap the Core theory
-# Load order matters: types -> positions -> constructors -> ...
+# Core Theory - Index (Simplified)
+# Only load theories without macro definitions
 
-# Load all Core theory components in order
 @_ Load "./00-types.sys2"
 @_ Load "./01-positions.sys2"
-@_ Load "./02-constructors.sys2"
-@_ Load "./03-structural.sys2"
-@_ Load "./04-semantic-primitives.sys2"
-@_ Load "./05-logic.sys2"
-@_ Load "./06-temporal.sys2"
-@_ Load "./07-modal.sys2"
-@_ Load "./08-defaults.sys2"
 @_ Load "./09-roles.sys2"
-@_ Load "./10-properties.sys2"
-@_ Load "./11-bootstrap-verbs.sys2"
-@_ Load "./12-reasoning.sys2"

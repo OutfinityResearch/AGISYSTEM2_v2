@@ -1,0 +1,74 @@
+# Supply Chain Theory
+# 10-step manufacturing/supply chain for multi-hop reasoning
+
+# === Raw materials (Step 1) ===
+isA IronOre RawMaterial
+isA Coal RawMaterial
+isA Bauxite RawMaterial
+isA CrudeOil RawMaterial
+isA Cotton RawMaterial
+
+# === Primary processing (Step 2) ===
+produces IronOre PigIron through Smelting
+produces Coal Cite through Coking
+produces Bauxite Alumina through BayerProcess
+produces CrudeOil Petroleum through Refining
+produces Cotton Thread through Spinning
+
+# === Secondary processing (Step 3) ===
+produces PigIron Steel through BessemProcess
+produces Alumina Aluminum through HallHeroult
+produces Petroleum Plastic through Polymerization
+produces Thread Fabric through Weaving
+
+# === Component manufacturing (Step 4) ===
+produces Steel SteelSheet through Rolling
+produces Aluminum AluminumSheet through Rolling
+produces Plastic PlasticPellets through Extrusion
+produces Fabric ClothPiece through Cutting
+
+# === Parts manufacturing (Step 5) ===
+produces SteelSheet CarBody through Stamping
+produces AluminumSheet AircraftPanel through Forming
+produces PlasticPellets PlasticCase through Molding
+produces ClothPiece GarmentPiece through Sewing
+
+# === Subassembly (Step 6) ===
+produces CarBody BodyAssembly through Welding
+produces AircraftPanel WingSection through Assembly
+produces PlasticCase ElectronicsHousing through Assembly
+produces GarmentPiece Garment through Finishing
+
+# === Major assembly (Step 7) ===
+produces BodyAssembly Vehicle through FinalAssembly
+produces WingSection Aircraft through FinalAssembly
+produces ElectronicsHousing Device through FinalAssembly
+
+# === Quality testing (Step 8) ===
+produces Vehicle TestedVehicle through QualityControl
+produces Aircraft TestedAircraft through QualityControl
+produces Device TestedDevice through QualityControl
+produces Garment TestedGarment through QualityControl
+
+# === Packaging (Step 9) ===
+produces TestedVehicle PackagedVehicle through Packaging
+produces TestedAircraft DeliveryReadyAircraft through Preparation
+produces TestedDevice PackagedDevice through Packaging
+produces TestedGarment PackagedGarment through Packaging
+
+# === Distribution (Step 10) ===
+produces PackagedVehicle RetailVehicle through Distribution
+produces DeliveryReadyAircraft DeliveredAircraft through Delivery
+produces PackagedDevice RetailDevice through Distribution
+produces PackagedGarment RetailGarment through Distribution
+
+# === Chain rules ===
+# If A produces B and B produces C, then A contributes to C
+@supplyChain Implies (And (produces $A $B through $P1) (produces $B $C through $P2)) (contributesTo $A $C)
+
+# Transitive contribution
+@chainTrans Implies (And (contributesTo $A $B) (contributesTo $B $C)) (contributesTo $A $C)
+
+# Origin tracking
+@originBase Implies (produces $A $B through $P) (hasOrigin $B $A)
+@originTrans Implies (And (hasOrigin $A $B) (hasOrigin $B $C)) (hasOrigin $A $C)

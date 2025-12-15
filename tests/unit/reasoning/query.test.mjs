@@ -36,7 +36,7 @@ describe('QueryEngine', () => {
     describe('single hole queries', () => {
       test('should find object of relation', () => {
         setup();
-        learn('@f loves John Mary');
+        learn('loves John Mary');
 
         const query = parse('@q loves John ?who').statements[0];
         const result = queryEngine.execute(query);
@@ -47,7 +47,7 @@ describe('QueryEngine', () => {
 
       test('should find subject of relation', () => {
         setup();
-        learn('@f owns Alice Book');
+        learn('owns Alice Book');
 
         const query = parse('@q owns ?who Book').statements[0];
         const result = queryEngine.execute(query);
@@ -57,7 +57,7 @@ describe('QueryEngine', () => {
 
       test('should report confidence', () => {
         setup();
-        learn('@f likes Bob Pizza');
+        learn('likes Bob Pizza');
 
         const query = parse('@q likes Bob ?what').statements[0];
         const result = queryEngine.execute(query);
@@ -69,9 +69,9 @@ describe('QueryEngine', () => {
       test('should report alternatives', () => {
         setup();
         learn(`
-          @f1 likes Alice Pizza
-          @f2 likes Alice Pasta
-          @f3 likes Alice Sushi
+          likes Alice Pizza
+          likes Alice Pasta
+          likes Alice Sushi
         `);
 
         const query = parse('@q likes Alice ?food').statements[0];
@@ -85,7 +85,7 @@ describe('QueryEngine', () => {
     describe('multiple hole queries', () => {
       test('should handle two holes', () => {
         setup();
-        learn('@f sells Alice Book Bob');
+        learn('sells Alice Book Bob');
 
         const query = parse('@q sells ?seller ?item Bob').statements[0];
         const result = queryEngine.execute(query);
@@ -96,7 +96,7 @@ describe('QueryEngine', () => {
 
       test('should fail gracefully with too many holes', () => {
         setup();
-        learn('@f test A B');
+        learn('test A B');
 
         const query = parse('@q ?a ?b ?c ?d ?e').statements[0];
         const result = queryEngine.execute(query);
@@ -109,7 +109,7 @@ describe('QueryEngine', () => {
     describe('no hole queries (direct match)', () => {
       test('should find matching fact', () => {
         setup();
-        learn('@f loves John Mary');
+        learn('loves John Mary');
 
         const query = parse('@q loves John Mary').statements[0];
         const result = queryEngine.execute(query);
@@ -119,7 +119,7 @@ describe('QueryEngine', () => {
 
       test('should report no match for completely unknown fact', () => {
         setup();
-        learn('@f loves John Mary');
+        learn('loves John Mary');
 
         // Query with completely unrelated entities
         const query = parse('@q destroys Planet99 Galaxy88').statements[0];
@@ -150,8 +150,8 @@ describe('QueryEngine', () => {
         setup();
         // Multiple similar facts might cause ambiguity
         learn(`
-          @f1 parent Alice Bob
-          @f2 parent Alice Carol
+          parent Alice Bob
+          parent Alice Carol
         `);
 
         const query = parse('@q parent Alice ?child').statements[0];
@@ -166,7 +166,7 @@ describe('QueryEngine', () => {
   describe('directMatch', () => {
     test('should find exact match', () => {
       setup();
-      learn('@f isA Socrates Human');
+      learn('isA Socrates Human');
 
       const query = parse('@q isA Socrates Human').statements[0];
       const result = queryEngine.execute(query);
@@ -177,8 +177,8 @@ describe('QueryEngine', () => {
     test('should rank by similarity', () => {
       setup();
       learn(`
-        @f1 isA Cat Animal
-        @f2 isA Dog Animal
+        isA Cat Animal
+        isA Dog Animal
       `);
 
       const query = parse('@q isA Cat Animal').statements[0];
@@ -196,7 +196,7 @@ describe('QueryEngine', () => {
   describe('confidence calculation', () => {
     test('should penalize multiple holes', () => {
       setup();
-      learn('@f relation A B');
+      learn('relation A B');
 
       const oneHole = parse('@q relation A ?x').statements[0];
       const twoHoles = parse('@q relation ?x ?y').statements[0];
@@ -217,9 +217,9 @@ describe('QueryEngine', () => {
     test('should work with bundled KB', () => {
       setup();
       learn(`
-        @f1 loves Alice Bob
-        @f2 loves Carol Dave
-        @f3 likes Eve Frank
+        loves Alice Bob
+        loves Carol Dave
+        likes Eve Frank
       `);
 
       const query = parse('@q loves ?who Bob').statements[0];
@@ -227,6 +227,95 @@ describe('QueryEngine', () => {
 
       // Should find something in bundled KB
       assert.ok('bindings' in result);
+    });
+  });
+
+  describe('multiple results (allResults)', () => {
+    test('should return allResults array', () => {
+      setup();
+      learn(`
+        isA Rex Dog
+        isA Whiskers Cat
+        isA Tweety Bird
+      `);
+
+      const query = parse('@q isA Rex ?what').statements[0];
+      const result = queryEngine.execute(query);
+
+      assert.ok('allResults' in result, 'should have allResults');
+      assert.ok(Array.isArray(result.allResults), 'allResults should be array');
+    });
+
+    test('should find correct answer among multiple facts', () => {
+      setup();
+      learn(`
+        isA Rex Dog
+        isA Whiskers Cat
+        isA Tweety Bird
+      `);
+
+      const query = parse('@q isA Rex ?what').statements[0];
+      const result = queryEngine.execute(query);
+
+      assert.ok(result.success, 'query should succeed');
+      assert.ok(result.bindings.has('what'), 'should have binding for what');
+      assert.equal(result.bindings.get('what').answer, 'Dog', 'Rex should be a Dog');
+    });
+
+    test('should return multiple matching results', () => {
+      setup();
+      // Multiple animals - query "what is an Animal"
+      learn(`
+        isA Dog Animal
+        isA Cat Animal
+        isA Bird Animal
+      `);
+
+      const query = parse('@q isA ?what Animal').statements[0];
+      const result = queryEngine.execute(query);
+
+      assert.ok(result.success, 'query should succeed');
+      assert.ok(result.allResults.length >= 1, 'should have at least one result');
+      // The best answer should be one of Dog, Cat, or Bird
+      const answer = result.bindings.get('what').answer;
+      assert.ok(['Dog', 'Cat', 'Bird'].includes(answer), `answer ${answer} should be Dog, Cat, or Bird`);
+    });
+
+    test('should provide alternatives from other matching facts', () => {
+      setup();
+      learn(`
+        likes John Pizza
+        likes John Pasta
+        likes John Sushi
+      `);
+
+      const query = parse('@q likes John ?food').statements[0];
+      const result = queryEngine.execute(query);
+
+      assert.ok(result.success, 'query should succeed');
+      const binding = result.bindings.get('food');
+      assert.ok(binding, 'should have food binding');
+      // Main answer should be one of the foods
+      assert.ok(['Pizza', 'Pasta', 'Sushi'].includes(binding.answer),
+        `answer ${binding.answer} should be Pizza, Pasta, or Sushi`);
+      // allResults should contain multiple results
+      assert.ok(result.allResults.length >= 1, 'should have multiple results in allResults');
+    });
+
+    test('should work through session.query()', () => {
+      setup();
+      session.learn(`
+        parent John Mary
+        parent John Bob
+        parent Alice Carol
+      `);
+
+      const result = session.query('@q parent John ?child');
+
+      assert.ok(result.success, 'query should succeed');
+      assert.ok('allResults' in result, 'should have allResults via session.query');
+      const answer = result.bindings.get('child').answer;
+      assert.ok(['Mary', 'Bob'].includes(answer), `John's child should be Mary or Bob, got ${answer}`);
     });
   });
 });

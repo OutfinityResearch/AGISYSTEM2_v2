@@ -1,0 +1,83 @@
+# Medical Ontology Theory
+# Integration of all reasoning types for medical domain
+
+# === Taxonomy (Transitive) ===
+isA Disease Condition
+isA InfectiousDisease Disease
+isA ViralDisease InfectiousDisease
+isA BacterialDisease InfectiousDisease
+isA COVID19 ViralDisease
+isA Flu ViralDisease
+isA Pneumonia BacterialDisease
+
+isA Treatment MedicalIntervention
+isA Medication Treatment
+isA Surgery Treatment
+isA Antibiotic Medication
+isA Antiviral Medication
+isA Vaccine Prevention
+
+isA Symptom Observation
+isA Fever Symptom
+isA Cough Symptom
+isA Fatigue Symptom
+isA BreathingDifficulty Symptom
+
+# === Causal Rules (Forward) ===
+@viralCausesFever Implies (has Patient ViralDisease) (exhibits Patient Fever)
+@viralCausesFatigue Implies (has Patient ViralDisease) (exhibits Patient Fatigue)
+@pneumoniaCausesBreathing Implies (has Patient Pneumonia) (exhibits Patient BreathingDifficulty)
+
+# === Diagnostic Rules (Abduction) ===
+@diagnoseFever explains (exhibits $P Fever) by (has $P InfectiousDisease)
+@diagnoseCough explains (exhibits $P Cough) by (has $P RespiratoryCondition)
+@diagnoseBreathing explains (exhibits $P BreathingDifficulty) by (has $P Pneumonia)
+
+# Combined symptoms -> specific diagnosis
+@diagnoseCOVID explains (And (exhibits $P Fever) (exhibits $P Cough) (exhibits $P LossOfTaste)) by (has $P COVID19)
+@diagnoseFlu explains (And (exhibits $P Fever) (exhibits $P Cough) (exhibits $P BodyAches)) by (has $P Flu)
+
+# === Treatment Rules (Rules + Defaults) ===
+# Default: Bacterial infections treated with antibiotics
+@bacterialTreatment defaultRule: (has $P BacterialDisease) => (prescribe $P Antibiotic) unless (allergicTo $P Antibiotic)
+
+# Default: Viral infections - supportive care
+@viralTreatment defaultRule: (has $P ViralDisease) => (prescribe $P Rest) unless (severe $P)
+
+# Severe viral -> hospitalization
+@severeTreatment Implies (And (has $P ViralDisease) (severe $P)) (recommend Hospitalization $P)
+
+# === Negation Rules ===
+# Antibiotics don't work on viruses
+Not (treats Antibiotic ViralDisease)
+
+# Cannot prescribe if allergic
+@allergyContra Implies (allergicTo $P $Med) (Not (canPrescribe $Med $P))
+
+# === Temporal Rules ===
+# Symptom onset before diagnosis before treatment
+before SymptomOnset Diagnosis
+before Diagnosis TreatmentStart
+before TreatmentStart Recovery
+
+# Incubation period
+@incubation Implies (exposedTo $P Virus $Time) (And (before $Time SymptomOnset) (after SymptomOnset $Time))
+
+# === Modal Rules ===
+# Doctors can prescribe
+can Doctor Prescribe
+# Patients cannot self-prescribe
+Not (can Patient SelfPrescribe)
+
+# Obligation: Must disclose allergies
+obligatory (discloses Patient Allergies)
+
+# Permission: May refuse treatment
+permitted (refuses Patient Treatment)
+
+# === Contradiction Detection ===
+# Cannot have bacterial and viral at same time in same organ
+@organConflict contradicts (has $P BacterialDisease $Organ) (has $P ViralDisease $Organ)
+
+# Treatment and contraindication
+@contraConflict contradicts (prescribe $P $Med) (contraindicatedFor $Med $P)

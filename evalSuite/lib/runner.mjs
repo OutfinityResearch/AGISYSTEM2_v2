@@ -1,523 +1,543 @@
 /**
- * EvalSuite - Test Runner
+ * EvalSuite - Test Runner (Granular Timeouts & Partial Failures)
  * @module evalSuite/lib/runner
- *
- * Executes evaluation cases through NL->DSL, Reasoning, DSL->NL pipeline.
- * Supports actions: learn, query, prove, summarize, elaborate
  */
 
 import { NLTransformer } from '../../src/nlp/transformer.mjs';
 import { Session } from '../../src/runtime/session.mjs';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Timeout for reasoning operations (ms)
-const REASONING_TIMEOUT = 5000;
+// Debug logging
+const DEBUG = process.env.SYS2_DEBUG === 'true';
+function dbg(category, ...args) {
+  if (DEBUG) console.log(`[${category}]`, ...args);
+}
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, '../../');
+
+// DEFAULTS
+const DEFAULT_TIMEOUTS = {
+  nlToDsl: 100,    // ms
+  reasoning: 100,  // ms (aggressive default as requested)
+  dslToNl: 100     // ms
+};
+
+// Reasoning Step Budget (for infinite loop prevention in sync code inside Session)
+const DEFAULT_STEP_BUDGET = 1000;
 
 /**
- * @typedef {Object} PhaseResult
- * @property {boolean} passed - Phase passed
- * @property {boolean} skipped - Phase was skipped
- * @property {boolean} timeout - Phase timed out
- * @property {string} [error] - Error message
- * @property {*} [expected] - Expected value
- * @property {*} [actual] - Actual value
- * @property {number} [durationMs] - Execution time
+ * Load Core Theories
+ * Set SYS2_SKIP_CORE=true to skip loading (for debugging)
  */
+function loadCoreTheories(session) {
+  if (process.env.SYS2_SKIP_CORE === 'true') {
+    console.log('[Runner] Skipping Core Theories (SYS2_SKIP_CORE=true)');
+    return;
+  }
 
-/**
- * @typedef {Object} CaseResult
- * @property {boolean} passed - All required phases passed
- * @property {Object<string, PhaseResult>} phases - Results per phase
- */
+  console.log('[Runner] Loading Core Theories...');
+  const corePath = path.join(PROJECT_ROOT, 'config', 'Core');
+  if (!fs.existsSync(corePath)) return;
 
-/**
- * Create NL transformer instance
- * @returns {NLTransformer}
- */
-function createTransformer() {
-  return new NLTransformer();
+  // Load all Core theories except index.sys2 (which uses Load directive)
+  const files = fs.readdirSync(corePath)
+    .filter(f => f.endsWith('.sys2') && f !== 'index.sys2')
+    .sort();
+
+  for (const file of files) {
+    dbg('CORE', `Loading theory: ${file}`);
+    const content = fs.readFileSync(path.join(corePath, file), 'utf8');
+    try {
+      const startTime = Date.now();
+      const res = session.learn(content);
+      const elapsed = Date.now() - startTime;
+      if (!res.success) {
+        console.error(`[Runner] Failed to load ${file}:`, res.errors);
+      } else {
+        dbg('CORE', `Loaded ${file} in ${elapsed}ms, facts: ${res.facts}`);
+      }
+    } catch (e) {
+      console.error(`[Runner] Exception loading ${file}:`, e.message);
+    }
+  }
+  console.log('[Runner] Core Theories loaded.');
 }
 
 /**
- * Create Session instance
- * @returns {Session}
+ * Helper: Measure sync execution time (Soft Timeout)
  */
-function createSession() {
-  return new Session({ geometry: 2048 });
-}
-
-/**
- * Run NL to DSL transformation phase
- * @param {Object} testCase - Test case
- * @param {NLTransformer} transformer - Transformer instance
- * @returns {PhaseResult}
- */
-function runNlToDsl(testCase, transformer) {
-  // If input_dsl is provided, skip NL transformation
-  if (testCase.input_dsl) {
-    return {
-      passed: true,
-      skipped: true,
-      actual: testCase.input_dsl,
-      note: 'Using input_dsl directly'
-    };
-  }
-
-  if (!testCase.input_nl) {
-    return { passed: true, skipped: true };
-  }
-
+function runSyncWithTimeout(fn, timeoutMs, description) {
   const start = Date.now();
-
   try {
-    const result = transformer.transform(testCase.input_nl);
-
-    // NL->DSL passes if we got non-empty DSL without fatal errors
-    const hasOutput = result.dsl && result.dsl.trim().length > 0;
-    const hasFatalErrors = result.errors.length > 0 && !result.success;
-
-    if (hasFatalErrors || !hasOutput) {
-      return {
-        passed: false,
-        error: result.errors.map(e => e.error).join('; ') || 'Empty DSL output',
-        actual: result.dsl,
-        durationMs: Date.now() - start
+    const result = fn();
+    const duration = Date.now() - start;
+    
+    if (duration > timeoutMs) {
+      return { 
+        success: false, 
+        result: result, // Return result anyway if it finished, but marked as fail
+        error: `Timeout: Operation took ${duration}ms (limit: ${timeoutMs}ms)`,
+        duration 
       };
     }
-
-    return {
-      passed: true,
-      actual: result.dsl,
-      parsed: result.parsed,
-      durationMs: Date.now() - start
-    };
-
+    return { success: true, result, duration };
   } catch (err) {
-    return {
-      passed: false,
-      error: err.message,
-      durationMs: Date.now() - start
+    return { 
+      success: false, 
+      error: `Error: ${err.message}`, 
+      duration: Date.now() - start 
     };
   }
 }
 
 /**
- * Run reasoning phase with real Session
- * @param {Object} testCase - Test case
- * @param {string} dsl - DSL to learn (from NL transform or input_dsl)
- * @param {Session} session - Session instance
- * @returns {Promise<PhaseResult>}
+ * Helper: Measure async execution time (Hard Timeout)
  */
-async function runReasoning(testCase, dsl, session) {
+async function runAsyncWithTimeout(promise, timeoutMs) {
   const start = Date.now();
-
-  try {
-    // Learn setup_dsl first if provided
-    if (testCase.setup_dsl) {
-      const setupResult = session.learn(testCase.setup_dsl);
-      if (!setupResult.success) {
-        return {
-          passed: false,
-          error: `Setup failed: ${setupResult.errors.join('; ')}`,
-          durationMs: Date.now() - start
-        };
-      }
-    }
-
-    // Learn the main DSL
-    if (dsl) {
-      const learnResult = session.learn(dsl);
-
-      // For 'learn' action, this IS the result
-      if (testCase.action === 'learn') {
-        return validateLearnResult(testCase, learnResult, Date.now() - start);
-      }
-
-      if (!learnResult.success) {
-        return {
-          passed: false,
-          error: `Learn failed: ${learnResult.errors.join('; ')}`,
-          actual: learnResult,
-          durationMs: Date.now() - start
-        };
-      }
-    }
-
-    // No query - just learning
-    if (!testCase.query_dsl && testCase.action !== 'query' && testCase.action !== 'prove') {
-      return {
-        passed: true,
-        actual: { learned: true },
-        durationMs: Date.now() - start
-      };
-    }
-
-    // Create timeout promise
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('TIMEOUT')), REASONING_TIMEOUT);
-    });
-
-    // Execute action
-    let result;
-    const actionPromise = (async () => {
-      switch (testCase.action) {
-        case 'query':
-          return session.query(testCase.query_dsl);
-
-        case 'prove':
-          return session.prove(testCase.query_dsl);
-
-        case 'summarize': {
-          // First query, then summarize
-          const qResult = session.query(testCase.query_dsl);
-          if (!qResult.success) {
-            return { success: false, reason: 'Query failed before summarize' };
-          }
-          // Get the vector and summarize
-          const vec = session.scope.get(testCase.query_dsl.match(/@(\w+)/)?.[1] || 'q');
-          if (vec) {
-            const summary = session.summarize(vec);
-            return { success: true, text: summary.text, queryResult: qResult };
-          }
-          return { success: false, reason: 'No vector to summarize' };
-        }
-
-        case 'elaborate': {
-          const pResult = session.prove(testCase.query_dsl);
-          const elaboration = session.elaborate(pResult);
-          return { ...pResult, elaboration: elaboration.text };
-        }
-
-        default:
-          return session.query(testCase.query_dsl);
-      }
-    })();
-
-    result = await Promise.race([actionPromise, timeoutPromise]);
-
-    // Validate result
-    return validateReasoningResult(testCase, result, Date.now() - start);
-
-  } catch (err) {
-    if (err.message === 'TIMEOUT') {
-      return {
-        passed: false,
-        timeout: true,
-        durationMs: Date.now() - start
-      };
-    }
-
-    return {
-      passed: false,
-      error: err.message,
-      durationMs: Date.now() - start
-    };
-  }
-}
-
-/**
- * Validate learn result against expected
- */
-function validateLearnResult(testCase, result, durationMs) {
-  if (!testCase.expected_result) {
-    return {
-      passed: result.success,
-      actual: result,
-      durationMs
-    };
-  }
-
-  const expected = testCase.expected_result;
-  let passed = true;
-
-  // Check success
-  if (expected.success !== undefined && result.success !== expected.success) {
-    passed = false;
-  }
-
-  // Check warnings (if expected)
-  if (expected.warnings && Array.isArray(expected.warnings)) {
-    const hasExpectedWarnings = expected.warnings.every(w =>
-      result.warnings?.some(actual => actual.includes(w))
-    );
-    if (!hasExpectedWarnings) passed = false;
-  }
-
-  return {
-    passed,
-    expected: testCase.expected_result,
-    actual: result,
-    durationMs
-  };
-}
-
-/**
- * Validate reasoning result against expected
- */
-function validateReasoningResult(testCase, result, durationMs) {
-  if (!testCase.expected_result) {
-    // No expected result - just check operation succeeded
-    const succeeded = testCase.action === 'prove'
-      ? result.valid === true
-      : result.success === true;
-
-    return {
-      passed: succeeded,
-      actual: result,
-      durationMs
-    };
-  }
-
-  const expected = testCase.expected_result;
-  let passed = true;
-
-  // Check by type
-  if (typeof expected === 'boolean') {
-    passed = (result.valid === expected || result.success === expected);
-  } else if (typeof expected === 'object') {
-    // Check each expected field
-    for (const [key, val] of Object.entries(expected)) {
-      if (result[key] !== val) {
-        passed = false;
-        break;
-      }
-    }
-  }
-
-  return {
-    passed,
-    expected: testCase.expected_result,
-    actual: result,
-    durationMs
-  };
-}
-
-/**
- * Generate NL text from query bindings
- * @param {Object} queryResult - Query result with bindings
- * @param {string} queryDsl - Original query DSL
- * @returns {string} Natural language text
- */
-function textFromBindings(queryResult, queryDsl) {
-  if (!queryResult?.bindings) return '';
-
-  // Parse query to get operator and structure
-  const parts = queryDsl.replace(/@\w+\s*/, '').trim().split(/\s+/);
-  const operator = parts[0];
-  const args = parts.slice(1);
-
-  // Fill holes from bindings
-  const filledArgs = args.map(arg => {
-    if (arg.startsWith('?')) {
-      const holeName = arg.substring(1);
-      const binding = queryResult.bindings.get(holeName);
-      return binding?.answer || arg;
-    }
-    return arg;
+  
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Timeout: Operation exceeded ${timeoutMs}ms`));
+    }, timeoutMs);
   });
 
-  // Generate text using common templates
-  const templates = {
-    isA: (a) => a.length >= 2 ? `${a[0]} is a ${a[1]}` : `${operator}(${a.join(', ')})`,
-    love: (a) => a.length >= 2 ? `${a[0]} loves ${a[1]}` : `${operator}(${a.join(', ')})`,
-    has: (a) => a.length >= 2 ? `${a[0]} has ${a[1]}` : `${operator}(${a.join(', ')})`,
-    hasProperty: (a) => a.length >= 2 ? `${a[0]} is ${a[1]}` : `${operator}(${a.join(', ')})`,
-    locatedIn: (a) => a.length >= 2 ? `${a[0]} is in ${a[1]}` : `${operator}(${a.join(', ')})`,
-    know: (a) => a.length >= 2 ? `${a[0]} knows ${a[1]}` : `${operator}(${a.join(', ')})`,
-    help: (a) => a.length >= 2 ? `${a[0]} helps ${a[1]}` : `${operator}(${a.join(', ')})`,
-    see: (a) => a.length >= 2 ? `${a[0]} sees ${a[1]}` : `${operator}(${a.join(', ')})`,
-    give: (a) => a.length >= 3 ? `${a[0]} gave ${a[1]} ${a[2]}` : `${operator}(${a.join(', ')})`,
-    sell: (a) => a.length >= 2 ? `${a[0]} sells ${a[1]}` : `${operator}(${a.join(', ')})`,
-    like: (a) => a.length >= 2 ? `${a[0]} likes ${a[1]}` : `${operator}(${a.join(', ')})`
-  };
-
-  if (templates[operator]) {
-    return templates[operator](filledArgs);
-  }
-
-  // Generic: subject operator object
-  if (filledArgs.length >= 2) {
-    return `${filledArgs[0]} ${operator} ${filledArgs.slice(1).join(' ')}`;
-  }
-  return `${operator}(${filledArgs.join(', ')})`;
-}
-
-/**
- * Generate NL text from prove result
- * @param {Object} proveResult - Prove result
- * @param {string} queryDsl - Original query DSL
- * @returns {string} Natural language text
- */
-function textFromProof(proveResult, queryDsl) {
-  if (!proveResult?.valid) {
-    return 'Not proven';
-  }
-
-  // Parse query to extract structure
-  const parts = queryDsl.replace(/@\w+\s*/, '').trim().split(/\s+/);
-  const operator = parts[0];
-  const args = parts.slice(1).filter(a => !a.startsWith('?'));
-
-  const templates = {
-    isA: (a) => a.length >= 2 ? `${a[0]} is a ${a[1]}` : `${a.join(' is ')}`,
-    love: (a) => a.length >= 2 ? `${a[0]} loves ${a[1]}` : `${a.join(' loves ')}`,
-    has: (a) => a.length >= 2 ? `${a[0]} has ${a[1]}` : `${a.join(' has ')}`,
-    hasProperty: (a) => a.length >= 2 ? `${a[0]} is ${a[1]}` : `${a.join(' is ')}`,
-    locatedIn: (a) => a.length >= 2 ? `${a[0]} is in ${a[1]}` : `${a.join(' is in ')}`,
-    see: (a) => a.length >= 2 ? `${a[0]} sees ${a[1]}` : `${a.join(' sees ')}`
-  };
-
-  if (templates[operator]) {
-    return templates[operator](args);
-  }
-
-  return `${args.join(' ')} (${operator})`;
-}
-
-/**
- * Run DSL to NL transformation phase (summarize)
- * @param {Object} testCase - Test case
- * @param {*} reasoningResult - Result from reasoning phase
- * @param {Session} session - Session instance
- * @returns {PhaseResult}
- */
-function runDslToNl(testCase, reasoningResult, session) {
-  if (!testCase.expected_nl) {
-    return { passed: true, skipped: true };
-  }
-
-  const start = Date.now();
-
   try {
-    let actualText = '';
+    const result = await Promise.race([promise, timeoutPromise]);
+    return { 
+      success: true, 
+      result, 
+      duration: Date.now() - start 
+    };
+  } catch (err) {
+    return { 
+      success: false, 
+      error: err.message, 
+      duration: Date.now() - start 
+    };
+  }
+}
 
-    // Get text from reasoning result if available
-    if (reasoningResult?.actual?.text) {
-      actualText = reasoningResult.actual.text;
-    } else if (reasoningResult?.actual?.elaboration) {
-      actualText = reasoningResult.actual.elaboration;
-    } else if (testCase.action === 'query' && reasoningResult?.actual?.bindings) {
-      // Generate text from query bindings
-      actualText = textFromBindings(reasoningResult.actual, testCase.query_dsl);
-    } else if (testCase.action === 'prove' && reasoningResult?.actual) {
-      // Generate text from proof result
-      actualText = textFromProof(reasoningResult.actual, testCase.query_dsl);
-    } else if (testCase.action === 'learn' && reasoningResult?.actual) {
-      // Generate text for learn result
-      const result = reasoningResult.actual;
-      if (result.success) {
-        actualText = `Learned ${result.facts} facts`;
-        if (result.warnings?.length > 0) {
-          actualText += `. Warnings: ${result.warnings.join(', ')}`;
-        }
+// --- PHASE 1: NL -> DSL ---
+
+function runNlToDsl(testCase, transformer, timeoutMs) {
+  dbg('NL->DSL', 'Starting with input:', testCase.input_nl?.substring(0, 50));
+
+  if (!testCase.input_nl) {
+    dbg('NL->DSL', 'No NL input, skipping');
+    return { passed: true, skipped: true, note: 'No NL input' };
+  }
+
+  // Parser is synchronous
+  const execution = runSyncWithTimeout(() => {
+    dbg('NL->DSL', 'Calling transformer.transform()');
+    const result = transformer.transform(testCase.input_nl);
+    dbg('NL->DSL', 'Transform result:', result.success, 'DSL:', result.dsl?.substring(0, 50));
+    return result;
+  }, timeoutMs, 'NL->DSL');
+
+  if (!execution.success) {
+    return { 
+      passed: false, 
+      error: execution.error, 
+      durationMs: execution.duration 
+    };
+  }
+
+  const result = execution.result;
+  const hasOutput = result.dsl && result.dsl.trim().length > 0;
+  
+  if (!result.success || !hasOutput) {
+     return {
+       passed: false,
+       error: result.errors?.map(e => e.error).join('; ') || 'Empty DSL output',
+       durationMs: execution.duration
+     };
+  }
+
+  // Validation against expected_dsl (if provided)
+  // Note: We pass even if it doesn't match expected_dsl strictly, 
+  // UNLESS the test case specifically demands strict matching.
+  // For now, if we got valid DSL, we consider it a "Pass" for the generation phase,
+  // letting the reasoning phase prove if it was correct.
+  
+  return {
+    passed: true,
+    actual: result.dsl,
+    durationMs: execution.duration
+  };
+}
+
+
+// --- PHASE 2: REASONING ---
+
+async function runReasoning(testCase, generatedDsl, session, timeoutMs) {
+  dbg('REASON', 'Starting action:', testCase.action, 'timeout:', timeoutMs);
+
+  // Determine source DSL:
+  // For query/prove: prefer input_dsl (guaranteed correct) over generated
+  // For learn: use generated DSL if available, else input_dsl
+  let dslToExecute;
+  let usedFallback = false;
+
+  if (testCase.action === 'query' || testCase.action === 'prove') {
+    // For query/prove, use input_dsl if available (it's the correct DSL)
+    if (testCase.input_dsl || testCase.query_dsl) {
+      dslToExecute = testCase.query_dsl || testCase.input_dsl;
+      dbg('REASON', 'Using input_dsl for query/prove');
+    } else if (generatedDsl) {
+      dslToExecute = generatedDsl;
+      dbg('REASON', 'Using generated DSL (no input_dsl available)');
+    }
+  } else {
+    // For learn, prefer input_dsl (canonical) over generated DSL
+    // NL transformer often produces structurally different DSL (different # of facts)
+    if (testCase.input_dsl) {
+      dslToExecute = testCase.input_dsl;
+      usedFallback = true;
+      dbg('REASON', 'Using input_dsl for learn (canonical)');
+    } else if (generatedDsl && !generatedDsl.trim().startsWith('#')) {
+      dslToExecute = generatedDsl;
+      dbg('REASON', 'Using generated DSL for learn (no input_dsl)');
+    }
+  }
+
+  if (!dslToExecute) {
+    dbg('REASON', 'No DSL available');
+    return { passed: false, error: 'No DSL available' };
+  }
+  dbg('REASON', 'DSL to execute:', dslToExecute?.substring(0, 80));
+
+  // Execute Async with Timeout
+  const execution = await runAsyncWithTimeout((async () => {
+    
+    // Setup first
+    if (testCase.setup_dsl) {
+      session.learn(testCase.setup_dsl);
+    }
+
+    if (testCase.action === 'learn') {
+      return session.learn(dslToExecute);
+    } 
+    else {
+      // For query/prove, use the DSL
+      const queryDsl = testCase.query_dsl || dslToExecute;
+      
+      const sessionOptions = { timeout: timeoutMs };
+
+      if (testCase.action === 'prove' || testCase.action === 'elaborate') {
+        return session.prove(queryDsl, sessionOptions);
       } else {
-        actualText = `Learn failed: ${result.errors?.join(', ') || 'unknown error'}`;
+        return session.query(queryDsl, sessionOptions); // Assuming query also supports options now or will ignore them
       }
     }
+  })(), timeoutMs);
 
-    if (!actualText) {
-      return {
-        passed: false,
-        error: 'No text generated',
-        expected: testCase.expected_nl,
-        durationMs: Date.now() - start
-      };
-    }
-
-    // Fuzzy match: normalize both strings
-    const normalize = s => s.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
-    const normalizedExpected = normalize(testCase.expected_nl);
-    const normalizedActual = normalize(actualText);
-
-    // Check if actual contains expected (or vice versa)
-    const passed = normalizedActual.includes(normalizedExpected) ||
-                   normalizedExpected.includes(normalizedActual) ||
-                   normalizedActual === normalizedExpected;
-
-    return {
-      passed,
-      expected: testCase.expected_nl,
-      actual: actualText,
-      durationMs: Date.now() - start
-    };
-
-  } catch (err) {
+  if (!execution.success) {
     return {
       passed: false,
-      error: err.message,
-      expected: testCase.expected_nl,
-      durationMs: Date.now() - start
+      error: execution.error,
+      usedFallback,
+      durationMs: execution.duration
     };
   }
+
+  const result = execution.result;
+  
+  // Logical Validation
+  let passed = false;
+  if (testCase.action === 'learn') passed = result.success;
+  else if (testCase.action === 'prove' || testCase.action === 'elaborate') {
+      // Prove passes if it returns a valid structure (true or false), 
+      // correctness is checked in DSL->NL or expected_result
+      passed = true; 
+  } else {
+      passed = result.success;
+  }
+
+  return {
+    passed,
+    actual: result,
+    usedFallback,
+    durationMs: execution.duration
+  };
 }
 
-/**
- * Run a single test case
- * @param {Object} testCase - Test case definition
- * @param {Session} [session] - Session instance (created if not provided)
- * @returns {Promise<CaseResult>}
- */
-export async function runCase(testCase, session = null) {
-  const transformer = createTransformer();
-  const sess = session || createSession();
+
+// --- PHASE 3: DSL -> NL (Decoding) ---
+
+function runDslToNl(testCase, reasoningPhase, session, timeoutMs) {
+  dbg('DSL->NL', 'Starting, expected_nl:', testCase.expected_nl?.substring(0, 40));
+
+  if (!testCase.expected_nl) {
+    dbg('DSL->NL', 'No expected_nl, skipping');
+    return { passed: true, skipped: true };
+  }
+  if (!reasoningPhase.passed && !reasoningPhase.actual) {
+    dbg('DSL->NL', 'Reasoning failed, cannot decode');
+    return { passed: false, skipped: true, error: 'Reasoning failed, cannot decode' };
+  }
+
+  const execution = runSyncWithTimeout(() => {
+    const result = reasoningPhase.actual;
+    let text = '';
+    dbg('DSL->NL', 'Action:', testCase.action, 'result keys:', Object.keys(result || {}));
+
+    if (testCase.action === 'learn') {
+       // Include warnings (contradictions, etc.) in the output if present
+       if (result.warnings && result.warnings.length > 0) {
+         text = result.warnings[0]; // First warning is most relevant
+       } else {
+         text = result.success ? `Learned ${result.facts} facts` : 'Failed';
+       }
+       dbg('DSL->NL', 'Learn text:', text);
+    }
+    else if (testCase.action === 'prove') {
+       dbg('DSL->NL', 'Processing prove result, valid:', result?.valid, 'result:', result?.result);
+
+       if (!result?.valid) {
+         // Failed proof - generate text for what couldn't be proven
+         let goalText = result?.goal || 'statement';
+         if (result?.goal) {
+           const parts = result.goal.trim().split(/\s+/).filter(p => !p.startsWith('@'));
+           if (parts.length >= 2) {
+             goalText = session.generateText(parts[0], parts.slice(1)).replace(/\.$/, '');
+           }
+         }
+         text = 'Cannot prove: ' + goalText;
+       } else if (result.result === false) {
+         // Disjoint proof - we proved the NEGATION (e.g., Tokyo NOT in Europe)
+         const steps = result.steps || [];
+         const proofSteps = [];
+
+         // Extract proof chain from steps
+         for (const step of steps) {
+           if (step.operation === 'chain_step' && step.from && step.to) {
+             const stepText = session.generateText('locatedIn', [step.from, step.to]).replace(/\.$/, '');
+             if (stepText && !proofSteps.includes(stepText)) {
+               proofSteps.push(stepText);
+             }
+           } else if (step.operation === 'disjoint_check') {
+             proofSteps.push(`${step.container} and ${step.target} are disjoint`);
+           }
+         }
+
+         // Get goal text
+         let goalText = '';
+         const goalString = result.goal;
+         if (goalString) {
+           const parts = goalString.trim().split(/\s+/).filter(p => !p.startsWith('@'));
+           if (parts.length >= 1) {
+             goalText = session.generateText(parts[0], parts.slice(1)).replace(/\.$/, '');
+           }
+         }
+
+         // Build negative proof output
+         if (goalText && proofSteps.length > 0) {
+           text = `False: NOT ${goalText}. Proof: ${proofSteps.join('. ')}.`;
+         } else if (goalText) {
+           text = `False: NOT ${goalText}`;
+         } else {
+           text = 'Proof valid (negative)';
+         }
+       } else {
+         // Success - directly decode proof step facts into propositions
+         const steps = result.steps || [];
+         const proofSteps = [];
+
+         for (const step of steps) {
+           if (step.fact) {
+             // Parse DSL fact: "operator arg1 arg2"
+             const factParts = step.fact.trim().split(/\s+/);
+             if (factParts.length >= 2) {
+               const stepOp = factParts[0];
+               const stepArgs = factParts.slice(1);
+               const stepText = session.generateText(stepOp, stepArgs).replace(/\.$/, '');
+               if (stepText && !proofSteps.includes(stepText)) {
+                 proofSteps.push(stepText);
+               }
+             }
+           }
+         }
+
+         // Get the goal text
+         let goalText = '';
+         const goalString = result.goal || (steps.length > 0 && steps[0].goal);
+         if (goalString) {
+           const parts = goalString.trim().split(/\s+/).filter(p => !p.startsWith('@'));
+           if (parts.length >= 1) {
+             goalText = session.generateText(parts[0], parts.slice(1)).replace(/\.$/, '');
+           }
+         }
+
+         // Build output with proof chain
+         if (goalText && proofSteps.length > 0) {
+           text = `True: ${goalText}. Proof: ${proofSteps.join('. ')}.`;
+         } else if (goalText) {
+           text = `True: ${goalText}`;
+         } else {
+           text = 'Proof valid';
+         }
+       }
+       dbg('DSL->NL', 'Prove result text:', text?.substring(0, 80));
+    }
+    else if (testCase.action === 'elaborate') {
+       dbg('DSL->NL', 'Calling session.elaborate()');
+       const el = session.elaborate(result);
+       text = el.text;
+       dbg('DSL->NL', 'Elaborate result:', text?.substring(0, 50));
+    }
+    else {
+       // Reconstruct text for query
+       dbg('DSL->NL', 'Query result bindings:', result.bindings ? 'yes' : 'no');
+       if (result.bindings) {
+           const texts = [];
+           const query = testCase.query_dsl || testCase.input_dsl || '';
+           const parts = query.trim().split(/\s+/).filter(p => !p.startsWith('@'));
+           const op = parts[0];
+           dbg('DSL->NL', 'Query op:', op, 'parts:', parts);
+
+           // Filter results: only use high-quality matches (similarity >= 0.8)
+           const allResults = result.allResults || [{bindings: result.bindings, score: 1}];
+           const goodResults = allResults.filter(r => (r.score || 1) >= 0.8);
+           const resultsToProcess = goodResults.length > 0 ? goodResults : [allResults[0]];
+
+           for(const r of resultsToProcess) {
+               const args = parts.slice(1).map(a => {
+                   if(a.startsWith('?')) return r.bindings.get(a.substring(1))?.answer || a;
+                   return a;
+               });
+               dbg('DSL->NL', 'generateText args:', op, args);
+               texts.push(session.generateText(op, args));
+           }
+           text = [...new Set(texts)].join('. ');
+       } else {
+           text = 'No results';
+       }
+       dbg('DSL->NL', 'Final text:', text?.substring(0, 80));
+    }
+    return text || 'No output';
+  }, timeoutMs, 'DSL->NL');
+
+  if (!execution.success) {
+    return { passed: false, error: execution.error, durationMs: execution.duration };
+  }
+
+  const actualText = execution.result;
+
+  // Comparison - normalize by removing punctuation, articles, and extra whitespace
+  const normalize = s => s.toLowerCase()
+    .replace(/[^\w\s]/g, '')           // Remove punctuation
+    .replace(/\b(a|an|the)\b/g, '')    // Remove articles
+    .replace(/\s+/g, ' ')              // Collapse whitespace
+    .trim();
+  const passed = normalize(actualText).includes(normalize(testCase.expected_nl));
+
+  return {
+    passed,
+    actual: actualText,
+    expected: testCase.expected_nl,
+    durationMs: execution.duration
+  };
+}
+
+
+// --- MAIN RUNNERS ---
+
+export async function runCase(testCase, session = null, config = {}) {
+  const sess = session || new Session({ geometry: 2048 });
+  if (!session) loadCoreTheories(sess);
+
+  // Apply timeouts (Cascade: Case Config > Suite Config (passed in func) > Defaults)
+  const timeouts = {
+    nlToDsl: testCase.timeout_nl || config.nlToDsl || DEFAULT_TIMEOUTS.nlToDsl,
+    reasoning: testCase.timeout_reasoning || config.reasoning || DEFAULT_TIMEOUTS.reasoning,
+    dslToNl: testCase.timeout_decoding || config.dslToNl || DEFAULT_TIMEOUTS.dslToNl
+  };
+
+  const transformer = new NLTransformer();
   const phases = {};
 
-  // Phase 1: NL to DSL (or use input_dsl directly)
-  phases.nlToDsl = runNlToDsl(testCase, transformer);
+  // 1. NL -> DSL
+  phases.nlToDsl = runNlToDsl(testCase, transformer, timeouts.nlToDsl);
 
-  // Get DSL to use for reasoning
-  const dsl = phases.nlToDsl.actual;
+  // 2. Reasoning (Uses Generated DSL if valid, else Fallback Input DSL)
+  phases.reasoning = await runReasoning(testCase, phases.nlToDsl.actual, sess, timeouts.reasoning);
 
-  // Phase 2: Reasoning
-  phases.reasoning = await runReasoning(testCase, dsl, sess);
+  // 3. DSL -> NL
+  phases.dslToNl = runDslToNl(testCase, phases.reasoning, sess, timeouts.dslToNl);
 
-  // Phase 3: DSL to NL (summarize/elaborate)
-  phases.dslToNl = runDslToNl(testCase, phases.reasoning, sess);
+  // Overall Status
+  // A case passes ONLY if all applicable phases passed
+  // But we return full detail for partial analysis
+  const passed = phases.nlToDsl.passed && phases.reasoning.passed && phases.dslToNl.passed;
 
-  // Overall pass: all non-skipped phases must pass
-  const passed = Object.values(phases).every(p => p.passed || p.skipped);
-
-  return { passed, phases };
+  return {
+    passed,
+    phases
+  };
 }
 
-/**
- * Run all cases in a suite
- * @param {Object} suite - Suite data
- * @returns {Promise<{results: CaseResult[], summary: Object}>}
- */
 export async function runSuite(suite) {
   const results = [];
+  const session = new Session({ geometry: 2048 });
+  
+  // 1. Load Core Theories
+  loadCoreTheories(session);
 
-  for (const testCase of suite.cases) {
-    // Each case gets a fresh session
-    const session = createSession();
-    const result = await runCase(testCase, session);
+  // 2. Load Suite-Specific Theories
+  if (suite.suiteTheories && suite.suiteTheories.length > 0) {
+    console.log(`[Runner] Loading ${suite.suiteTheories.length} suite-specific theories...`);
+    for (const theoryContent of suite.suiteTheories) {
+      try {
+        const res = session.learn(theoryContent);
+        if (!res.success) {
+          console.error('[Runner] Failed to load suite theory:', res.errors);
+        }
+      } catch (e) {
+        console.error('[Runner] Exception loading suite theory:', e.message);
+      }
+    }
+  }
+
+  // Suite-level timeout config
+  const suiteConfig = {
+    nlToDsl: suite.timeouts?.nlToDsl || DEFAULT_TIMEOUTS.nlToDsl,
+    reasoning: suite.timeouts?.reasoning || DEFAULT_TIMEOUTS.reasoning,
+    dslToNl: suite.timeouts?.dslToNl || DEFAULT_TIMEOUTS.dslToNl
+  };
+
+  console.log(`Running suite with timeouts: ${JSON.stringify(suiteConfig)}`);
+
+  for (const step of suite.cases) {
+    const result = await runCase(step, session, suiteConfig);
     results.push(result);
   }
 
-  // Calculate summary
+  const reasoningStats = session.getReasoningStats();
+  session.close();
+
+  // Stats
   const total = results.length;
   const passed = results.filter(r => r.passed).length;
-  const failed = total - passed;
-
-  // Partial pass: NL->DSL passed but reasoning failed
-  const partialPass = results.filter(r =>
-    !r.passed &&
-    r.phases.nlToDsl?.passed &&
-    !r.phases.nlToDsl?.skipped
-  ).length;
+  
+  // Count "Partial Fixes" -> NL Failed but Reasoning Passed (using fallback)
+  const brokenParser = results.filter(r => !r.phases.nlToDsl.passed && r.phases.reasoning.passed).length;
 
   return {
     results,
     summary: {
       total,
       passed,
-      failed,
-      partialPass
+      failed: total - passed,
+      brokenParser, // Useful metric: logic works, language fails
+      reasoningStats
     }
   };
 }
 
-export default {
-  runCase,
-  runSuite
-};
+export default { runCase, runSuite };

@@ -1,0 +1,47 @@
+# Domain Constraints Theory
+# Real-world constraints that must be respected
+# For testing contradiction detection
+
+# === Physical Constraints ===
+# An object cannot be in two distant places simultaneously
+@physLoc constraint SingleLocation: (locatedIn $X $Y) excludes (locatedIn $X $Z) when (distant $Y $Z)
+
+# === Temporal Constraints ===
+# An event cannot be both before and after another event
+@tempOrder contradicts (before $X $Y) (after $X $Y)
+
+# === Numeric Constraints ===
+# A quantity cannot be both positive and negative
+@numSign contradicts (hasValue $X Positive) (hasValue $X Negative)
+# A quantity cannot be both zero and non-zero
+@numZero contradicts (hasValue $X Zero) (hasValue $X NonZero)
+
+# === Identity Constraints ===
+# Two different individuals are not the same
+# (closed world for identity)
+
+# === Role Constraints ===
+# Some roles are mutually exclusive
+@roleExcl1 contradicts (hasRole $X Buyer) (hasRole $X Seller) in SameTransaction
+@roleExcl2 contradicts (hasRole $X Student) (hasRole $X Teacher) in SameClass
+
+# === Cardinality Constraints ===
+# A person has exactly one biological mother
+# uniqueConstraint (hasBiologicalMother $X $Y)
+
+# === Integrity Constraints ===
+# If married, must have spouse
+@marriedIntegrity constraint: (hasStatus $X Married) requires (hasSpouse $X $Y)
+
+# === Domain-specific constraints ===
+# Banking: account balance cannot be negative (for some accounts)
+@balanceConstraint constraint: (accountType $A Savings) excludes (hasBalance $A Negative)
+
+# Employment: cannot be both employer and employee of same company
+@employmentConstraint contradicts (employs $Company $Person) (employedBy $Person $Company)
+
+# Family: parent-child is asymmetric
+@familyAsym contradicts (isParentOf $X $Y) (isParentOf $Y $X)
+
+# Age: cannot be both child and elderly
+@ageExcl contradicts (hasAgeGroup $X Child) (hasAgeGroup $X Elderly)
