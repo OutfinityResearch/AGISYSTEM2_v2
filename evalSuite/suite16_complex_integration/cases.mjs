@@ -37,12 +37,22 @@ export const steps = [
     expected_nl: 'Learned 3 facts'
   },
 
-  // === PHASE 2: Prove COVID is a disease (transitive) ===
+  // === PHASE 2: Prove COVID is Infectious (2-step transitive) ===
+  // CHAIN: COVID -> ViralDisease -> Infectious
+  {
+    action: 'prove',
+    input_nl: 'Is COVID infectious?',
+    input_dsl: '@goal isA COVID Infectious',
+    expected_nl: 'True: COVID is an infectious. Proof: COVID is a viraldisease. ViralDisease is an infectious.'
+  },
+
+  // === PHASE 2b: Prove COVID is a disease (3-step transitive) ===
+  // CHAIN: COVID -> ViralDisease -> Infectious -> Disease
   {
     action: 'prove',
     input_nl: 'Is COVID a disease?',
     input_dsl: '@goal isA COVID Disease',
-    expected_nl: 'True: COVID is a disease'
+    expected_nl: 'True: COVID is a disease. Proof: COVID is a viraldisease. ViralDisease is an infectious. Infectious is a disease.'
   },
 
   // === PHASE 3: Learn patient symptoms ===
@@ -106,15 +116,21 @@ export const steps = [
     expected_nl: 'True: John is innocent'
   },
 
-  // === PHASE 9: Learn court hierarchy ===
+  // === PHASE 9: Learn court hierarchy and type hierarchy ===
   {
     action: 'learn',
-    input_nl: 'District court appeals to Appeals court. Appeals court appeals to Supreme court.',
+    input_nl: 'Build court type hierarchy: Institution > LegalBody > Court > TrialCourt. District court is a trial court.',
     input_dsl: `
+      isA LegalBody Institution
+      isA Court LegalBody
+      isA TrialCourt Court
+      isA AppellateBody Court
+      isA DistrictCourt TrialCourt
+      isA AppealsCourt AppellateBody
       appealsTo DistrictCourt AppealsCourt
       appealsTo AppealsCourt SupremeCourt
     `,
-    expected_nl: 'Learned 2 facts'
+    expected_nl: 'Learned 8 facts'
   },
 
   // === PHASE 10: Prove court appeal ===
@@ -123,6 +139,33 @@ export const steps = [
     input_nl: 'Does District Court appeal to Appeals Court?',
     input_dsl: '@goal appealsTo DistrictCourt AppealsCourt',
     expected_nl: 'True: DistrictCourt appealsTo AppealsCourt'
+  },
+
+  // === PHASE 10b: Prove DistrictCourt is a Court (2-step transitive) ===
+  // CHAIN: DistrictCourt -> TrialCourt -> Court
+  {
+    action: 'prove',
+    input_nl: 'Is DistrictCourt a Court?',
+    input_dsl: '@goal isA DistrictCourt Court',
+    expected_nl: 'True: DistrictCourt is a court. Proof: DistrictCourt is a trialcourt. TrialCourt is a court.'
+  },
+
+  // === PHASE 10c: Prove DistrictCourt is a LegalBody (3-step transitive) ===
+  // CHAIN: DistrictCourt -> TrialCourt -> Court -> LegalBody
+  {
+    action: 'prove',
+    input_nl: 'Is DistrictCourt a LegalBody?',
+    input_dsl: '@goal isA DistrictCourt LegalBody',
+    expected_nl: 'True: DistrictCourt is a legalbody. Proof: DistrictCourt is a trialcourt. TrialCourt is a court. Court is a legalbody.'
+  },
+
+  // === PHASE 10d: Prove DistrictCourt is an Institution (4-step transitive) ===
+  // CHAIN: DistrictCourt -> TrialCourt -> Court -> LegalBody -> Institution
+  {
+    action: 'prove',
+    input_nl: 'Is DistrictCourt an Institution?',
+    input_dsl: '@goal isA DistrictCourt Institution',
+    expected_nl: 'True: DistrictCourt is an institution. Proof: DistrictCourt is a trialcourt. TrialCourt is a court. Court is a legalbody. LegalBody is an institution.'
   },
 
   // === PHASE 11: Learn legal temporal sequence ===

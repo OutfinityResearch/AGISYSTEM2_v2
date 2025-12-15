@@ -17,7 +17,8 @@ import {
   List,
   TheoryDeclaration,
   ImportStatement,
-  RuleDeclaration
+  RuleDeclaration,
+  MacroDeclaration
 } from './ast.mjs';
 
 export class ParseError extends Error {
@@ -144,14 +145,25 @@ export class Parser {
    * [@dest] or [@dest:persistName] operator arg1 arg2 ...
    * @dest = temporary variable (scope only)
    * @dest:persistName = persistent fact (added to KB)
+   *
+   * Also handles macro definitions:
+   * @name:persistName macro param1 param2 ...
+   *   body statements
+   *   return $result
+   * end
    */
   parseStatement() {
     let destination = null;
     let persistName = null;
+    let startLine = this.peek().line;
+    let startColumn = this.peek().column;
 
     // Optional destination with optional persist name
     if (this.check(TOKEN_TYPES.AT)) {
-      const destValue = this.advance().value;
+      const destToken = this.advance();
+      const destValue = destToken.value;
+      startLine = destToken.line;
+      startColumn = destToken.column;
       // Check if it has :persistName suffix
       if (destValue.includes(':')) {
         const parts = destValue.split(':');
@@ -160,6 +172,11 @@ export class Parser {
       } else {
         destination = destValue;
       }
+    }
+
+    // Check if this is a macro definition
+    if (this.check(TOKEN_TYPES.KEYWORD) && this.peek().value === 'macro') {
+      return this.parseMacro(destination, persistName, startLine, startColumn);
     }
 
     // Operator
@@ -183,6 +200,68 @@ export class Parser {
       operator.line,
       operator.column,
       persistName  // New: pass persist name to Statement
+    );
+  }
+
+  /**
+   * Parse macro definition
+   * @name:persistName macro param1 param2 ...
+   *   body statements
+   *   return $result
+   * end
+   */
+  parseMacro(destination, persistName, line, column) {
+    // Consume 'macro' keyword
+    this.expect(TOKEN_TYPES.KEYWORD, 'macro');
+
+    // Parse parameter names (identifiers until newline/end of line)
+    const params = [];
+    while (!this.isEof() && !this.check(TOKEN_TYPES.NEWLINE)) {
+      if (this.check(TOKEN_TYPES.IDENTIFIER)) {
+        params.push(this.advance().value);
+      } else {
+        break;
+      }
+    }
+
+    // Skip newline after macro header
+    this.skipNewlines();
+
+    // Parse body statements until 'end' keyword
+    const body = [];
+    let returnExpr = null;
+
+    while (!this.isEof()) {
+      // Check for 'end' keyword
+      if (this.check(TOKEN_TYPES.KEYWORD) && this.peek().value === 'end') {
+        this.advance(); // consume 'end'
+        break;
+      }
+
+      // Check for 'return' keyword
+      if (this.check(TOKEN_TYPES.KEYWORD) && this.peek().value === 'return') {
+        this.advance(); // consume 'return'
+        returnExpr = this.parseExpression();
+        this.skipNewlines();
+        continue;
+      }
+
+      // Parse normal statement as part of macro body
+      const stmt = this.parseStatement();
+      if (stmt) {
+        body.push(stmt);
+      }
+      this.skipNewlines();
+    }
+
+    return new MacroDeclaration(
+      destination,
+      persistName,
+      params,
+      body,
+      returnExpr,
+      line,
+      column
     );
   }
 

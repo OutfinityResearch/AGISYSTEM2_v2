@@ -188,6 +188,32 @@ export class RuleDeclaration extends ASTNode {
   }
 }
 
+/**
+ * Macro declaration
+ * @name:persistName macro param1 param2 ...
+ *   body statements
+ *   return $result
+ * end
+ */
+export class MacroDeclaration extends ASTNode {
+  constructor(name, persistName, params, body, returnExpr, line, column) {
+    super('MacroDeclaration', line, column);
+    this.name = name;           // Macro name (from @name)
+    this.persistName = persistName; // Persist name (from @name:persist)
+    this.params = params;       // Parameter names (string[])
+    this.body = body;           // Body statements (Statement[])
+    this.returnExpr = returnExpr; // Return expression (Expression or null)
+  }
+
+  toString() {
+    const dest = this.persistName
+      ? `@${this.name}:${this.persistName}`
+      : `@${this.name}`;
+    const params = this.params.join(' ');
+    return `${dest} macro ${params} ... end`;
+  }
+}
+
 export default {
   ASTNode,
   Program,
@@ -201,5 +227,6 @@ export default {
   List,
   TheoryDeclaration,
   ImportStatement,
-  RuleDeclaration
+  RuleDeclaration,
+  MacroDeclaration
 };

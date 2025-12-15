@@ -17,8 +17,31 @@ export const theories = [
 
 export const timeout = 2000;
 
-// Simplified - test direct ability/status facts
+// Includes type hierarchies for transitive reasoning
 export const steps = [
+  // === PHASE 0: Setup creature type hierarchy (4 levels) ===
+  // Creature > Animal > Bird/Mammal/Fish
+  // Bird > Canary/Penguin
+  {
+    action: 'learn',
+    input_nl: 'Build creature hierarchy: Creature > Animal > Bird/Mammal > Canary/Penguin',
+    input_dsl: `
+      isA Animal Creature
+      isA Bird Animal
+      isA Mammal Animal
+      isA Fish Animal
+      isA Canary Bird
+      isA Penguin Bird
+      isA Elephant Mammal
+      isA Clownfish Fish
+      isA Tweety Canary
+      isA Opus Penguin
+      isA Dumbo Elephant
+      isA Nemo Clownfish
+    `,
+    expected_nl: 'Learned 12 facts'
+  },
+
   // === PHASE 1: Learn bird abilities ===
   {
     action: 'learn',
@@ -61,6 +84,51 @@ export const steps = [
     input_nl: 'Can Opus swim?',
     input_dsl: '@goal can Opus Swim',
     expected_nl: 'True: Opus can Swim'
+  },
+
+  // === PHASE 5b: Prove Tweety is a Bird (2-step transitive) ===
+  // CHAIN: Tweety -> Canary -> Bird
+  {
+    action: 'prove',
+    input_nl: 'Is Tweety a Bird?',
+    input_dsl: '@goal isA Tweety Bird',
+    expected_nl: 'True: Tweety is a bird. Proof: Tweety is a canary. Canary is a bird.'
+  },
+
+  // === PHASE 5c: Prove Tweety is an Animal (3-step transitive) ===
+  // CHAIN: Tweety -> Canary -> Bird -> Animal
+  {
+    action: 'prove',
+    input_nl: 'Is Tweety an Animal?',
+    input_dsl: '@goal isA Tweety Animal',
+    expected_nl: 'True: Tweety is an animal. Proof: Tweety is a canary. Canary is a bird. Bird is an animal.'
+  },
+
+  // === PHASE 5d: Prove Tweety is a Creature (4-step transitive) ===
+  // CHAIN: Tweety -> Canary -> Bird -> Animal -> Creature
+  {
+    action: 'prove',
+    input_nl: 'Is Tweety a Creature?',
+    input_dsl: '@goal isA Tweety Creature',
+    expected_nl: 'True: Tweety is a creature. Proof: Tweety is a canary. Canary is a bird. Bird is an animal. Animal is a creature.'
+  },
+
+  // === PHASE 5e: Prove Opus is a Creature (4-step transitive) ===
+  // CHAIN: Opus -> Penguin -> Bird -> Animal -> Creature
+  {
+    action: 'prove',
+    input_nl: 'Is Opus a Creature?',
+    input_dsl: '@goal isA Opus Creature',
+    expected_nl: 'True: Opus is a creature. Proof: Opus is a penguin. Penguin is a bird. Bird is an animal. Animal is a creature.'
+  },
+
+  // === PHASE 5f: Prove Nemo is a Creature (4-step transitive) ===
+  // CHAIN: Nemo -> Clownfish -> Fish -> Animal -> Creature
+  {
+    action: 'prove',
+    input_nl: 'Is Nemo a Creature?',
+    input_dsl: '@goal isA Nemo Creature',
+    expected_nl: 'True: Nemo is a creature. Proof: Nemo is a clownfish. Clownfish is a fish. Fish is an animal. Animal is a creature.'
   },
 
   // === PHASE 6: Learn mammal abilities ===

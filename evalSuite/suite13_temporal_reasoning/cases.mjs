@@ -1,22 +1,40 @@
 /**
  * Suite 13 - Temporal Reasoning
  *
- * Tests direct temporal relations: Before, After, During, Causes.
+ * Tests temporal relations with type hierarchies for multi-step reasoning.
  *
  * Core theories: 05-logic, 06-temporal
  */
 
 export const name = 'Temporal Reasoning';
-export const description = 'Test direct temporal relations';
+export const description = 'Test temporal relations with type hierarchies';
 
 export const theories = [
   '05-logic.sys2',
   '06-temporal.sys2'
 ];
 
-// Simplified - test direct temporal facts
 export const steps = [
-  // === PHASE 1: Learn historical events ===
+  // === PHASE 0: Setup event type hierarchy (4 levels) ===
+  // Event > HistoricalEvent > War > WorldWar
+  // Event > HistoricalEvent > Treaty > PeaceTreaty
+  {
+    action: 'learn',
+    input_nl: 'Build event type hierarchy: Event > HistoricalEvent > War/Treaty',
+    input_dsl: `
+      isA HistoricalEvent Event
+      isA War HistoricalEvent
+      isA Treaty HistoricalEvent
+      isA WorldWar War
+      isA PeaceTreaty Treaty
+      isA WW1 WorldWar
+      isA WW2 WorldWar
+      isA TreatyOfVersailles PeaceTreaty
+    `,
+    expected_nl: 'Learned 8 facts'
+  },
+
+  // === PHASE 1: Learn historical events temporal relations ===
   {
     action: 'learn',
     input_nl: 'WW1 was before TreatyOfVersailles. WW2 was after TreatyOfVersailles.',
@@ -49,6 +67,42 @@ export const steps = [
     input_nl: 'What was before TreatyOfVersailles?',
     input_dsl: '@q before ?event TreatyOfVersailles',
     expected_nl: 'WW1 before TreatyOfVersailles'
+  },
+
+  // === PHASE 4b: Prove WW1 is a War (2-step transitive) ===
+  // CHAIN: WW1 -> WorldWar -> War
+  {
+    action: 'prove',
+    input_nl: 'Is WW1 a War?',
+    input_dsl: '@goal isA WW1 War',
+    expected_nl: 'True: WW1 is a war. Proof: WW1 is a worldwar. WorldWar is a war.'
+  },
+
+  // === PHASE 4c: Prove WW1 is a HistoricalEvent (3-step transitive) ===
+  // CHAIN: WW1 -> WorldWar -> War -> HistoricalEvent
+  {
+    action: 'prove',
+    input_nl: 'Is WW1 a HistoricalEvent?',
+    input_dsl: '@goal isA WW1 HistoricalEvent',
+    expected_nl: 'True: WW1 is a historicalevent. Proof: WW1 is a worldwar. WorldWar is a war. War is a historicalevent.'
+  },
+
+  // === PHASE 4d: Prove WW1 is an Event (4-step transitive) ===
+  // CHAIN: WW1 -> WorldWar -> War -> HistoricalEvent -> Event
+  {
+    action: 'prove',
+    input_nl: 'Is WW1 an Event?',
+    input_dsl: '@goal isA WW1 Event',
+    expected_nl: 'True: WW1 is an event. Proof: WW1 is a worldwar. WorldWar is a war. War is a historicalevent. HistoricalEvent is an event.'
+  },
+
+  // === PHASE 4e: Prove TreatyOfVersailles is an Event (4-step transitive) ===
+  // CHAIN: TreatyOfVersailles -> PeaceTreaty -> Treaty -> HistoricalEvent -> Event
+  {
+    action: 'prove',
+    input_nl: 'Is TreatyOfVersailles an Event?',
+    input_dsl: '@goal isA TreatyOfVersailles Event',
+    expected_nl: 'True: TreatyOfVersailles is an event. Proof: TreatyOfVersailles is a peacetreaty. PeaceTreaty is a treaty. Treaty is a historicalevent. HistoricalEvent is an event.'
   },
 
   // === PHASE 5: Learn daily routine ===

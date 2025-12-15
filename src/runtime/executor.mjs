@@ -14,7 +14,8 @@ import {
   Hole,
   Reference,
   Literal,
-  List
+  List,
+  MacroDeclaration
 } from '../parser/ast.mjs';
 import { parse } from '../parser/parser.mjs';
 import { readFileSync } from 'node:fs';
@@ -51,44 +52,12 @@ export class Executor {
     const results = [];
     const errors = [];
 
-    // Track macro definition context
-    let macroContext = null;  // { name, persistName, params, body }
-
     for (const stmt of program.statements) {
       try {
-        const operatorName = this.extractName(stmt.operator);
-
-        // Check if starting a macro definition
-        if (operatorName === 'macro') {
-          macroContext = {
-            name: stmt.destination,
-            persistName: stmt.persistName,
-            params: stmt.args.map(a => this.extractName(a)),
-            body: [],
-            line: stmt.line
-          };
-          continue;
-        }
-
-        // Check if ending a macro definition
-        if (operatorName === 'end' && macroContext) {
-          // Store the macro definition
-          if (!this.session.macros) {
-            this.session.macros = new Map();
-          }
-          this.session.macros.set(macroContext.name, macroContext);
-          results.push({
-            type: 'macro_definition',
-            name: macroContext.name,
-            params: macroContext.params
-          });
-          macroContext = null;
-          continue;
-        }
-
-        // If inside macro, collect statement instead of executing
-        if (macroContext) {
-          macroContext.body.push(stmt);
+        // Handle macro declarations (now parsed as AST nodes)
+        if (stmt instanceof MacroDeclaration) {
+          const result = this.executeMacroDeclaration(stmt);
+          results.push(result);
           continue;
         }
 
@@ -100,16 +69,83 @@ export class Executor {
       }
     }
 
-    // Warn if macro wasn't closed
-    if (macroContext) {
-      errors.push(new ExecutionError(`Unclosed macro definition: ${macroContext.name}`, { line: macroContext.line }));
-    }
-
     return {
       success: errors.length === 0,
       results,
       errors
     };
+  }
+
+  /**
+   * Execute macro declaration - store macro for later invocation
+   * @param {MacroDeclaration} macro - Macro AST node
+   * @returns {Object} Result
+   */
+  executeMacroDeclaration(macro) {
+    // Initialize macros map if needed
+    if (!this.session.macros) {
+      this.session.macros = new Map();
+    }
+
+    // Store the macro definition
+    this.session.macros.set(macro.name, {
+      name: macro.name,
+      persistName: macro.persistName,
+      params: macro.params,
+      body: macro.body,
+      returnExpr: macro.returnExpr,
+      line: macro.line
+    });
+
+    return {
+      type: 'macro_definition',
+      name: macro.name,
+      persistName: macro.persistName,
+      params: macro.params
+    };
+  }
+
+  /**
+   * Expand and execute a macro invocation
+   * @param {string} macroName - Name of the macro to invoke
+   * @param {Array} args - Argument expressions
+   * @returns {Vector} Result vector from macro expansion
+   */
+  expandMacro(macroName, args) {
+    const macro = this.session.macros?.get(macroName);
+    if (!macro) {
+      throw new ExecutionError(`Unknown macro: ${macroName}`);
+    }
+
+    // Create a new scope for macro execution with parameter bindings
+    const savedScope = new Map(this.session.scope);
+
+    try {
+      // Bind arguments to parameters
+      for (let i = 0; i < macro.params.length; i++) {
+        const paramName = macro.params[i];
+        const argVec = i < args.length ? this.resolveExpression(args[i]) : null;
+        if (argVec) {
+          this.session.scope.set(paramName, argVec);
+        }
+      }
+
+      // Execute body statements
+      for (const stmt of macro.body) {
+        this.executeStatement(stmt);
+      }
+
+      // Return the result expression if specified
+      if (macro.returnExpr) {
+        return this.resolveExpression(macro.returnExpr);
+      }
+
+      // Return last defined variable in macro scope, or null
+      return null;
+    } finally {
+      // Restore original scope
+      this.session.scope = savedScope;
+    }
   }
 
   /**
@@ -283,30 +319,22 @@ export class Executor {
    * @param {Program} program - AST program
    */
   trackRulesFromProgram(program) {
+    // Build a map of destinations to statements for quick lookup
+    const stmtMap = new Map();
+    for (const stmt of program.statements) {
+      if (stmt.destination) {
+        stmtMap.set(stmt.destination, stmt);
+      }
+    }
+
     for (const stmt of program.statements) {
       const operatorName = this.extractName(stmt.operator);
       if (operatorName === 'Implies' && stmt.args.length >= 2) {
         const condVec = this.resolveExpression(stmt.args[0]);
         const concVec = this.resolveExpression(stmt.args[1]);
 
-        // Check for compound conditions (And/Or)
-        let conditionParts = null;
-        const condArg = stmt.args[0];
-        if (condArg.type === 'Reference') {
-          const refName = condArg.name;
-          for (const earlierStmt of program.statements) {
-            if (earlierStmt.destination === refName) {
-              const earlyOp = this.extractName(earlierStmt.operator);
-              if (earlyOp === 'And' || earlyOp === 'Or') {
-                conditionParts = {
-                  type: earlyOp,
-                  parts: earlierStmt.args.map(arg => this.resolveExpression(arg))
-                };
-              }
-              break;
-            }
-          }
-        }
+        // Recursively extract compound conditions (And/Or)
+        const conditionParts = this.extractCompoundCondition(stmt.args[0], stmtMap);
 
         this.session.rules.push({
           name: stmt.destination,
@@ -318,6 +346,34 @@ export class Executor {
         });
       }
     }
+  }
+
+  /**
+   * Recursively extract compound condition structure (And/Or)
+   * @param {Expression} expr - Expression to analyze
+   * @param {Map} stmtMap - Map of destinations to statements
+   * @returns {Object|null} Compound structure or null
+   */
+  extractCompoundCondition(expr, stmtMap) {
+    // If it's a reference, look up the statement it refers to
+    if (expr.type === 'Reference') {
+      const stmt = stmtMap.get(expr.name);
+      if (stmt) {
+        const op = this.extractName(stmt.operator);
+        if (op === 'And' || op === 'Or') {
+          // Recursively extract nested parts
+          const parts = stmt.args.map(arg => {
+            const nested = this.extractCompoundCondition(arg, stmtMap);
+            if (nested) {
+              return nested; // Return nested compound structure
+            }
+            return { type: 'leaf', vector: this.resolveExpression(arg) };
+          });
+          return { type: op, parts: parts };
+        }
+      }
+    }
+    return null;
   }
 
   /**

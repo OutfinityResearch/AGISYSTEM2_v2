@@ -16,16 +16,19 @@ export const theories = [
 ];
 
 export const steps = [
-  // === PHASE 1: Learn love relationships ===
+  // === PHASE 1: Learn animal hierarchy and love relationships ===
   {
     action: 'learn',
-    input_nl: 'John loves Mary. Mary loves John. Alice loves Bob.',
+    input_nl: 'Mammals are animals. Birds are animals. Fish are animals. John loves Mary. Mary loves John. Alice loves Bob.',
     input_dsl: `
+      isA Mammal Animal
+      isA Bird Animal
+      isA Fish Animal
       love John Mary
       love Mary John
       love Alice Bob
     `,
-    expected_nl: 'Learned 3 facts'
+    expected_nl: 'Learned 6 facts'
   },
 
   // === PHASE 2: Query who John loves ===
@@ -62,6 +65,33 @@ export const steps = [
     input_nl: 'What is a whale?',
     input_dsl: '@q isA Whale ?class',
     expected_nl: 'Whale is a mammal'
+  },
+
+  // === PHASE 5b: Prove whale is an animal (2-step transitive) ===
+  // CHAIN: Whale -> Mammal -> Animal
+  {
+    action: 'prove',
+    input_nl: 'Is a whale an animal?',
+    input_dsl: '@goal isA Whale Animal',
+    expected_nl: 'True: Whale is an animal. Proof: Whale is a mammal. Mammal is an animal.'
+  },
+
+  // === PHASE 5c: Prove dolphin is an animal (2-step transitive) ===
+  // CHAIN: Dolphin -> Mammal -> Animal
+  {
+    action: 'prove',
+    input_nl: 'Is a dolphin an animal?',
+    input_dsl: '@goal isA Dolphin Animal',
+    expected_nl: 'True: Dolphin is an animal. Proof: Dolphin is a mammal. Mammal is an animal.'
+  },
+
+  // === PHASE 5d: Prove shark is an animal (2-step transitive) ===
+  // CHAIN: Shark -> Fish -> Animal
+  {
+    action: 'prove',
+    input_nl: 'Is a shark an animal?',
+    input_dsl: '@goal isA Shark Animal',
+    expected_nl: 'True: Shark is an animal. Proof: Shark is a fish. Fish is an animal.'
   },
 
   // === PHASE 6: Query mammals (multiple) ===

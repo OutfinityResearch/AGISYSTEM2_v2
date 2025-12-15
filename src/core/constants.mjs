@@ -60,5 +60,8 @@ export const TOKEN_TYPES = {
 export const KEYWORDS = [
   'theory',
   'import',
-  'rule'
+  'rule',
+  'macro',
+  'end',
+  'return'
 ];

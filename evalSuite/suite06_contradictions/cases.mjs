@@ -19,16 +19,18 @@ export const theories = [
 ];
 
 export const steps = [
-  // === PHASE 1: Learn animal taxonomy ===
+  // === PHASE 1: Learn animal taxonomy with hierarchy ===
   {
     action: 'learn',
-    input_nl: 'A whale is a mammal. A dolphin is a mammal. A shark is a fish.',
+    input_nl: 'Mammals are animals. Fish are animals. A whale is a mammal. A dolphin is a mammal. A shark is a fish.',
     input_dsl: `
+      isA Mammal Animal
+      isA Fish Animal
       isA Whale Mammal
       isA Dolphin Mammal
       isA Shark Fish
     `,
-    expected_nl: 'Learned 3 facts'
+    expected_nl: 'Learned 5 facts'
   },
 
   // === PHASE 2: Verify whale is mammal ===
@@ -53,6 +55,24 @@ export const steps = [
     input_nl: 'What mammals do we know?',
     input_dsl: '@q isA ?what Mammal',
     expected_nl: 'Whale is a mammal. Dolphin is a mammal'
+  },
+
+  // === PHASE 4b: Prove whale is an animal (2-step transitive) ===
+  // CHAIN: Whale -> Mammal -> Animal
+  {
+    action: 'prove',
+    input_nl: 'Is a whale an animal?',
+    input_dsl: '@goal isA Whale Animal',
+    expected_nl: 'True: Whale is an animal. Proof: Whale is a mammal. Mammal is an animal.'
+  },
+
+  // === PHASE 4c: Prove shark is an animal (2-step transitive) ===
+  // CHAIN: Shark -> Fish -> Animal
+  {
+    action: 'prove',
+    input_nl: 'Is a shark an animal?',
+    input_dsl: '@goal isA Shark Animal',
+    expected_nl: 'True: Shark is an animal. Proof: Shark is a fish. Fish is an animal.'
   },
 
   // === PHASE 5: Learn person locations ===
@@ -83,16 +103,19 @@ export const steps = [
     expected_nl: 'John is in Paris'
   },
 
-  // === PHASE 8: Learn city locations ===
+  // === PHASE 8: Learn city and country locations ===
   {
     action: 'learn',
-    input_nl: 'Paris is in France. London is in England. Tokyo is in Japan.',
+    input_nl: 'Paris is in France. London is in England. Tokyo is in Japan. France is in Europe. England is in Europe. Japan is in Asia.',
     input_dsl: `
       locatedIn Paris France
       locatedIn London England
       locatedIn Tokyo Japan
+      locatedIn France Europe
+      locatedIn England Europe
+      locatedIn Japan Asia
     `,
-    expected_nl: 'Learned 3 facts'
+    expected_nl: 'Learned 6 facts'
   },
 
   // === PHASE 9: Query Paris location ===
@@ -101,6 +124,42 @@ export const steps = [
     input_nl: 'Where is Paris?',
     input_dsl: '@q locatedIn Paris ?country',
     expected_nl: 'Paris is in France'
+  },
+
+  // === PHASE 9b: Prove John is in France (2-step transitive) ===
+  // CHAIN: John -> Paris -> France
+  {
+    action: 'prove',
+    input_nl: 'Is John in France?',
+    input_dsl: '@goal locatedIn John France',
+    expected_nl: 'True: John is in France. Proof: John is in Paris. Paris is in France.'
+  },
+
+  // === PHASE 9c: Prove John is in Europe (3-step transitive) ===
+  // CHAIN: John -> Paris -> France -> Europe
+  {
+    action: 'prove',
+    input_nl: 'Is John in Europe?',
+    input_dsl: '@goal locatedIn John Europe',
+    expected_nl: 'True: John is in Europe. Proof: John is in Paris. Paris is in France. France is in Europe.'
+  },
+
+  // === PHASE 9d: Prove Mary is in Europe (3-step transitive) ===
+  // CHAIN: Mary -> London -> England -> Europe
+  {
+    action: 'prove',
+    input_nl: 'Is Mary in Europe?',
+    input_dsl: '@goal locatedIn Mary Europe',
+    expected_nl: 'True: Mary is in Europe. Proof: Mary is in London. London is in England. England is in Europe.'
+  },
+
+  // === PHASE 9e: Prove Alice is in Asia (3-step transitive) ===
+  // CHAIN: Alice -> Tokyo -> Japan -> Asia
+  {
+    action: 'prove',
+    input_nl: 'Is Alice in Asia?',
+    input_dsl: '@goal locatedIn Alice Asia',
+    expected_nl: 'True: Alice is in Asia. Proof: Alice is in Tokyo. Tokyo is in Japan. Japan is in Asia.'
   },
 
   // === PHASE 10: Learn relationships ===
@@ -170,16 +229,19 @@ export const steps = [
     expected_nl: 'True: Door is locked'
   },
 
-  // === PHASE 17: Learn categories ===
+  // === PHASE 17: Learn categories with hierarchy ===
   {
     action: 'learn',
-    input_nl: 'Fluffy is a cat. Rex is a dog. Tweety is a bird.',
+    input_nl: 'Cats are mammals. Dogs are mammals. Birds are animals. Fluffy is a cat. Rex is a dog. Tweety is a bird.',
     input_dsl: `
+      isA Cat Mammal
+      isA Dog Mammal
+      isA Bird Animal
       isA Fluffy Cat
       isA Rex Dog
       isA Tweety Bird
     `,
-    expected_nl: 'Learned 3 facts'
+    expected_nl: 'Learned 6 facts'
   },
 
   // === PHASE 18: Query what Fluffy is ===
@@ -190,12 +252,48 @@ export const steps = [
     expected_nl: 'Fluffy is a cat'
   },
 
-  // === PHASE 19: Prove Fluffy is a cat ===
+  // === PHASE 19: Prove Fluffy is a cat (direct) ===
   {
     action: 'prove',
     input_nl: 'Is Fluffy a cat?',
     input_dsl: '@goal isA Fluffy Cat',
     expected_nl: 'True: Fluffy is a cat'
+  },
+
+  // === PHASE 19b: Prove Fluffy is a mammal (2-step transitive) ===
+  // CHAIN: Fluffy -> Cat -> Mammal
+  {
+    action: 'prove',
+    input_nl: 'Is Fluffy a mammal?',
+    input_dsl: '@goal isA Fluffy Mammal',
+    expected_nl: 'True: Fluffy is a mammal. Proof: Fluffy is a cat. Cat is a mammal.'
+  },
+
+  // === PHASE 19c: Prove Fluffy is an animal (3-step transitive) ===
+  // CHAIN: Fluffy -> Cat -> Mammal -> Animal
+  {
+    action: 'prove',
+    input_nl: 'Is Fluffy an animal?',
+    input_dsl: '@goal isA Fluffy Animal',
+    expected_nl: 'True: Fluffy is an animal. Proof: Fluffy is a cat. Cat is a mammal. Mammal is an animal.'
+  },
+
+  // === PHASE 19d: Prove Rex is an animal (3-step transitive) ===
+  // CHAIN: Rex -> Dog -> Mammal -> Animal
+  {
+    action: 'prove',
+    input_nl: 'Is Rex an animal?',
+    input_dsl: '@goal isA Rex Animal',
+    expected_nl: 'True: Rex is an animal. Proof: Rex is a dog. Dog is a mammal. Mammal is an animal.'
+  },
+
+  // === PHASE 19e: Prove Tweety is an animal (2-step transitive) ===
+  // CHAIN: Tweety -> Bird -> Animal
+  {
+    action: 'prove',
+    input_nl: 'Is Tweety an animal?',
+    input_dsl: '@goal isA Tweety Animal',
+    expected_nl: 'True: Tweety is an animal. Proof: Tweety is a bird. Bird is an animal.'
   },
 
   // === PHASE 20: Query all cats ===

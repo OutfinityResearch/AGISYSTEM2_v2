@@ -164,12 +164,57 @@ export const steps = [
     expected_nl: 'Louvre is in Paris. EiffelTower is in Paris'
   },
 
-  // === PHASE 16: Prove Louvre is in Paris ===
+  // === PHASE 16: Prove Louvre is in Paris (direct) ===
   {
     action: 'prove',
     input_nl: 'Is the Louvre in Paris?',
     input_dsl: '@goal locatedIn Louvre Paris',
     expected_nl: 'True: Louvre is in Paris'
+  },
+
+  // === PHASE 16b: Prove Dog is an Animal (2-step transitive) ===
+  // CHAIN: Dog -> Mammal -> Animal
+  {
+    action: 'prove',
+    input_nl: 'Is a dog an animal?',
+    input_dsl: '@goal isA Dog Animal',
+    expected_nl: 'True: Dog is an animal. Proof: Dog is a mammal. Mammal is an animal.'
+  },
+
+  // === PHASE 16c: Prove Cat is an Animal (2-step transitive) ===
+  // CHAIN: Cat -> Mammal -> Animal
+  {
+    action: 'prove',
+    input_nl: 'Is a cat an animal?',
+    input_dsl: '@goal isA Cat Animal',
+    expected_nl: 'True: Cat is an animal. Proof: Cat is a mammal. Mammal is an animal.'
+  },
+
+  // === PHASE 16d: Prove Louvre is in France (2-step transitive) ===
+  // CHAIN: Louvre -> Paris -> France
+  {
+    action: 'prove',
+    input_nl: 'Is the Louvre in France?',
+    input_dsl: '@goal locatedIn Louvre France',
+    expected_nl: 'True: Louvre is in France. Proof: Louvre is in Paris. Paris is in France.'
+  },
+
+  // === PHASE 16e: Prove Louvre is in Europe (3-step transitive) ===
+  // CHAIN: Louvre -> Paris -> France -> Europe
+  {
+    action: 'prove',
+    input_nl: 'Is the Louvre in Europe?',
+    input_dsl: '@goal locatedIn Louvre Europe',
+    expected_nl: 'True: Louvre is in Europe. Proof: Louvre is in Paris. Paris is in France. France is in Europe.'
+  },
+
+  // === PHASE 16f: Prove Tree is an Organism (2-step transitive) ===
+  // CHAIN: Tree -> Plant -> Organism
+  {
+    action: 'prove',
+    input_nl: 'Is a tree an organism?',
+    input_dsl: '@goal isA Tree Organism',
+    expected_nl: 'True: Tree is an organism. Proof: Tree is a plant. Plant is an organism.'
   },
 
   // === PHASE 17: Learn more properties ===

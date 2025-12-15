@@ -19,6 +19,24 @@ export const timeout = 2000;
 
 // Simplified - test direct modal facts
 export const steps = [
+  // === PHASE 0: Setup ability type hierarchy (4 levels) ===
+  // Ability > PhysicalAbility > Locomotion > Flying/Swimming
+  {
+    action: 'learn',
+    input_nl: 'Build ability hierarchy: Ability > PhysicalAbility > Locomotion > Flying',
+    input_dsl: `
+      isA PhysicalAbility Ability
+      isA MentalAbility Ability
+      isA Locomotion PhysicalAbility
+      isA Flying Locomotion
+      isA Swimming Locomotion
+      isA Walking Locomotion
+      isA Reasoning MentalAbility
+      isA LogicalReasoning Reasoning
+    `,
+    expected_nl: 'Learned 8 facts'
+  },
+
   // === PHASE 1: Learn necessary truths ===
   {
     action: 'learn',
@@ -90,6 +108,51 @@ export const steps = [
     input_nl: 'What can Bird do?',
     input_dsl: '@q can Bird ?ability',
     expected_nl: 'Bird can Fly'
+  },
+
+  // === PHASE 8b: Prove Flying is Locomotion (2-step transitive) ===
+  // CHAIN: Flying -> Locomotion
+  {
+    action: 'prove',
+    input_nl: 'Is Flying a type of Locomotion?',
+    input_dsl: '@goal isA Flying Locomotion',
+    expected_nl: 'True: Flying is a locomotion'
+  },
+
+  // === PHASE 8c: Prove Flying is PhysicalAbility (2-step transitive) ===
+  // CHAIN: Flying -> Locomotion -> PhysicalAbility
+  {
+    action: 'prove',
+    input_nl: 'Is Flying a Physical Ability?',
+    input_dsl: '@goal isA Flying PhysicalAbility',
+    expected_nl: 'True: Flying is a physicalability. Proof: Flying is a locomotion. Locomotion is a physicalability.'
+  },
+
+  // === PHASE 8d: Prove Flying is an Ability (3-step transitive) ===
+  // CHAIN: Flying -> Locomotion -> PhysicalAbility -> Ability
+  {
+    action: 'prove',
+    input_nl: 'Is Flying an Ability?',
+    input_dsl: '@goal isA Flying Ability',
+    expected_nl: 'True: Flying is an ability. Proof: Flying is a locomotion. Locomotion is a physicalability. PhysicalAbility is an ability.'
+  },
+
+  // === PHASE 8e: Prove Swimming is an Ability (3-step transitive) ===
+  // CHAIN: Swimming -> Locomotion -> PhysicalAbility -> Ability
+  {
+    action: 'prove',
+    input_nl: 'Is Swimming an Ability?',
+    input_dsl: '@goal isA Swimming Ability',
+    expected_nl: 'True: Swimming is an ability. Proof: Swimming is a locomotion. Locomotion is a physicalability. PhysicalAbility is an ability.'
+  },
+
+  // === PHASE 8f: Prove LogicalReasoning is an Ability (3-step transitive) ===
+  // CHAIN: LogicalReasoning -> Reasoning -> MentalAbility -> Ability
+  {
+    action: 'prove',
+    input_nl: 'Is LogicalReasoning an Ability?',
+    input_dsl: '@goal isA LogicalReasoning Ability',
+    expected_nl: 'True: LogicalReasoning is an ability. Proof: LogicalReasoning is a reasoning. Reasoning is a mentalability. MentalAbility is an ability.'
   },
 
   // === PHASE 9: Learn inabilities ===
