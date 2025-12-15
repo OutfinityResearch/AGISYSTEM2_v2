@@ -335,7 +335,7 @@ export const steps = [
     action: 'prove',
     input_nl: 'Does research indirectly cause patent?',
     input_dsl: '@goal indirectCause Research Patent',
-    expected_nl: 'True: Research indirectcauses Patent'
+    expected_nl: 'True: Research indirectly causes Patent'
   },
 
   // === PHASE 27: Chained effect rules ===
@@ -387,7 +387,7 @@ export const steps = [
     action: 'prove',
     input_nl: 'Does pollution indirectly cause drought?',
     input_dsl: '@goal indirectCause Pollution Drought',
-    expected_nl: 'True: Pollution indirectcauses Drought'
+    expected_nl: 'True: Pollution indirectly causes Drought'
   },
 
   // === PHASE 31: Rule for chained consequences ===
@@ -409,7 +409,7 @@ export const steps = [
     action: 'prove',
     input_nl: 'Would preventing pollution prevent drought?',
     input_dsl: '@goal wouldPrevent Pollution Drought',
-    expected_nl: 'True: Pollution wouldprevents Drought'
+    expected_nl: 'True: Preventing Pollution would prevent Drought'
   },
 
   // === PHASE 33: Combined causal + prevention reasoning ===
@@ -417,7 +417,7 @@ export const steps = [
     action: 'prove',
     input_nl: 'Would preventing climate change prevent food shortage?',
     input_dsl: '@goal wouldPrevent ClimateChange FoodShortage',
-    expected_nl: 'True: ClimateChange wouldprevents FoodShortage'
+    expected_nl: 'True: Preventing ClimateChange would prevent FoodShortage'
   }
 ];
 

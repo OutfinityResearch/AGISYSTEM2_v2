@@ -480,45 +480,11 @@ export class ProofEngine {
       return this.proveInstantiatedCompound(rule.conditionParts, bindings, depth);
     }
 
-    // Simple condition - build instantiated string
+    // Simple condition - use proveSingleCondition which handles KB, transitive, and rule chaining
     const instantiated = this.instantiateAST(condAST, bindings);
     dbg('UNIFY', 'Instantiated condition:', instantiated);
 
-    // Check if there are unbound variables - need pattern search
-    if (instantiated.includes('?')) {
-      return this.proveWithUnboundVars(instantiated, bindings, depth);
-    }
-
-    // Search KB for matching fact
-    const matchResult = this.findMatchingFact(instantiated);
-
-    if (matchResult.found) {
-      return {
-        valid: true,
-        method: 'instantiated_match',
-        confidence: matchResult.confidence,
-        steps: [{ operation: 'condition_instantiated', fact: instantiated, confidence: matchResult.confidence }]
-      };
-    }
-
-    // Try recursive proving if condition is another rule application
-    const subGoal = this.parseInstantiatedGoal(instantiated);
-    if (subGoal) {
-      const subResult = this.proveGoal(subGoal, depth);
-      if (subResult.valid) {
-        return {
-          valid: true,
-          method: 'recursive_prove',
-          confidence: subResult.confidence * 0.95,
-          steps: [
-            { operation: 'prove_instantiated', fact: instantiated },
-            ...subResult.steps
-          ]
-        };
-      }
-    }
-
-    return { valid: false, reason: 'Cannot prove instantiated condition' };
+    return this.proveSingleCondition(instantiated, bindings, depth);
   }
 
   /**
@@ -638,6 +604,7 @@ export class ProofEngine {
     const op = parts[0];
     const args = parts.slice(1);
 
+    // Direct KB matches
     for (const fact of this.session.kbFacts) {
       this.session.reasoningStats.kbScans++;
       const meta = fact.metadata;
@@ -679,8 +646,31 @@ export class ProofEngine {
       }
     }
 
-    // Also try transitive reasoning if no direct matches found and no variables
+    // For transitive relations like "isA Subject ?var", find all transitive targets
+    if (TRANSITIVE_RELATIONS.has(op) && args.length === 2 && !args[0].startsWith('?') && args[1].startsWith('?')) {
+      const subject = args[0];
+      const varName = args[1].substring(1);
+      const transitiveTargets = this.findAllTransitiveTargets(op, subject);
+
+      for (const target of transitiveTargets) {
+        // Skip if already found via direct match
+        const alreadyFound = matches.some(m => m.newBindings?.get(varName) === target);
+        if (alreadyFound) continue;
+
+        const newBindings = new Map();
+        newBindings.set(varName, target.value);
+        matches.push({
+          valid: true,
+          confidence: 0.85,
+          newBindings,
+          steps: target.steps
+        });
+      }
+    }
+
+    // For fully instantiated conditions, try transitive and rule chaining
     if (matches.length === 0 && !condStr.includes('?')) {
+      // Try transitive reasoning
       const transResult = this.tryTransitiveForCondition(condStr);
       if (transResult.valid) {
         matches.push({
@@ -689,10 +679,55 @@ export class ProofEngine {
           newBindings: new Map(),
           steps: transResult.steps
         });
+      } else {
+        // Try rule chaining
+        const ruleResult = this.tryRuleChainForCondition(condStr, 0);
+        if (ruleResult.valid) {
+          matches.push({
+            valid: true,
+            confidence: ruleResult.confidence || 0.85,
+            newBindings: new Map(),
+            steps: ruleResult.steps || []
+          });
+        }
       }
     }
 
     return matches;
+  }
+
+  /**
+   * Find all transitive targets reachable from subject via given relation
+   * E.g., for "isA Poodle ?x", returns [Dog, Mammal, Animal, LivingThing]
+   */
+  findAllTransitiveTargets(operatorName, subject, visited = new Set()) {
+    const targets = [];
+    if (visited.has(subject)) return targets;
+    visited.add(subject);
+
+    // Find direct targets
+    const directTargets = this.findIntermediates(operatorName, subject);
+
+    for (const target of directTargets) {
+      targets.push({
+        value: target,
+        steps: [{ operation: 'transitive_step', fact: `${operatorName} ${subject} ${target}` }]
+      });
+
+      // Recursively find further targets
+      const furtherTargets = this.findAllTransitiveTargets(operatorName, target, visited);
+      for (const further of furtherTargets) {
+        targets.push({
+          value: further.value,
+          steps: [
+            { operation: 'transitive_step', fact: `${operatorName} ${subject} ${target}` },
+            ...further.steps
+          ]
+        });
+      }
+    }
+
+    return targets;
   }
 
   /**
@@ -790,11 +825,75 @@ export class ProofEngine {
         };
       }
 
+      // Try backward chaining with rules (for chained rule application)
+      if (depth < this.options.maxDepth) {
+        const ruleResult = this.tryRuleChainForCondition(condStr, depth + 1);
+        if (ruleResult.valid) {
+          return ruleResult;
+        }
+      }
+
       return { valid: false };
     }
 
     // Has unbound variables - pattern search in KB
     return this.proveWithUnboundVars(condStr, bindings, depth);
+  }
+
+  /**
+   * Try to prove a condition string by applying rules (backward chaining)
+   */
+  tryRuleChainForCondition(condStr, depth) {
+    const parts = condStr.split(/\s+/);
+    if (parts.length < 2) return { valid: false };
+
+    const goalOp = parts[0];
+    const goalArgs = parts.slice(1);
+
+    // Try each rule
+    for (const rule of this.session.rules) {
+      if (!rule.hasVariables) continue;
+
+      // Check if conclusion matches
+      const concAST = rule.conclusionAST;
+      const concOp = this.extractOperatorFromAST(concAST);
+      const concArgs = this.extractArgsFromAST(concAST);
+
+      if (concOp !== goalOp || concArgs.length !== goalArgs.length) continue;
+
+      // Try to unify
+      const ruleBindings = new Map();
+      let unifyOk = true;
+
+      for (let i = 0; i < goalArgs.length; i++) {
+        const concArg = concArgs[i];
+        if (concArg.isVariable) {
+          ruleBindings.set(concArg.name, goalArgs[i]);
+        } else if (concArg.name !== goalArgs[i]) {
+          unifyOk = false;
+          break;
+        }
+      }
+
+      if (!unifyOk) continue;
+
+      // Prove the condition with these bindings
+      const condResult = this.proveInstantiatedCondition(rule, ruleBindings, depth);
+      if (condResult.valid) {
+        this.session.reasoningStats.ruleAttempts++;
+        return {
+          valid: true,
+          method: 'rule_chain',
+          confidence: (condResult.confidence || 0.9) * 0.9,
+          steps: [
+            { operation: 'rule_applied', fact: condStr, rule: rule.name },
+            ...(condResult.steps || [])
+          ]
+        };
+      }
+    }
+
+    return { valid: false };
   }
 
   /**

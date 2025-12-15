@@ -228,8 +228,12 @@ export function reportGlobalSummary(suiteResults) {
   // Table header with legend
   console.log(`${colors.bold}${colors.cyan}Suite Results with Reasoning Statistics:${colors.reset}`);
   console.log();
-  console.log(`${colors.dim}Legend: KBScan=KB lookups | SimChk=vector similarity checks | Trans=transitive reasoning steps${colors.reset}`);
-  console.log(`${colors.dim}        Rules=rule applications | MaxD=max proof depth | AvgL=avg proof length | Query/Proof=counts${colors.reset}`);
+  console.log(`${colors.dim}Column Definitions:${colors.reset}`);
+  console.log(`${colors.dim}  Pass   = % of tests passed          Tests  = passed/total count${colors.reset}`);
+  console.log(`${colors.dim}  KBScan = KB fact lookups            SimChk = vector similarity comparisons${colors.reset}`);
+  console.log(`${colors.dim}  Trans  = transitive chain steps     Rules  = backward chaining rule applications${colors.reset}`);
+  console.log(`${colors.dim}  MaxD   = deepest proof chain        AvgL   = average proof steps (proofs only, not learn)${colors.reset}`);
+  console.log(`${colors.dim}  Query  = query operations count     Proof  = prove operations count${colors.reset}`);
   console.log();
   console.log(`${colors.dim}${'─'.repeat(110)}${colors.reset}`);
   console.log(`${colors.bold}` +
@@ -272,7 +276,7 @@ export function reportGlobalSummary(suiteResults) {
     }
 
     const pct = suite.summary.total > 0
-      ? Math.round((suite.summary.passed / suite.summary.total) * 100)
+      ? Math.floor((suite.summary.passed / suite.summary.total) * 100)
       : 0;
 
     const statusColor = pct === 100 ? colors.green : pct >= 50 ? colors.yellow : colors.red;
@@ -300,7 +304,7 @@ export function reportGlobalSummary(suiteResults) {
   console.log(`${colors.dim}${'─'.repeat(110)}${colors.reset}`);
 
   // Totals row
-  const overallPct = totalCases > 0 ? Math.round((totalPassed / totalCases) * 100) : 0;
+  const overallPct = totalCases > 0 ? Math.floor((totalPassed / totalCases) * 100) : 0;
   const overallColor = overallPct === 100 ? colors.green : overallPct >= 50 ? colors.yellow : colors.red;
   const avgProofLen = aggregatedStats.proofs > 0
     ? (aggregatedStats.totalProofSteps / aggregatedStats.proofs).toFixed(1)
@@ -326,9 +330,6 @@ export function reportGlobalSummary(suiteResults) {
   console.log(`${colors.bold}Score: ${overallColor}${overallPct}%${colors.reset}  ` +
     `${colors.dim}(${totalPassed} passed, ${totalCases - totalPassed} failed)${colors.reset}`);
   console.log();
-
-  // Methods and Operations in compact format
-  reportMethodsAndOps(aggregatedStats);
 }
 
 /**
