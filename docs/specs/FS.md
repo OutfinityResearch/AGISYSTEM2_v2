@@ -1,9 +1,9 @@
 # AGISystem2 - Functional Specification (FS)
 
-**Document Version:** 1.0
+**Document Version:** 2.0
 **Status:** Draft
 **Classification:** GAMP Category 5 - Custom Application
-**Date:** 2024-12-12
+**Date:** 2024-12-15
 
 ---
 
@@ -31,11 +31,18 @@ This Functional Specification (FS) defines the detailed functional requirements 
 |  +-----------------------------+--------------------------------+  |
 |                                |                                  |
 |  +-----------------------------+--------------------------------+  |
-|  |                    Core HDC Layer                             | |
-|  |  Vector | Operations | Position | AsciiStamp                  | |
+|  |                    HDC Facade (src/hdc/facade.mjs)            | |
+|  |  bind | bundle | similarity | createFromName | topKSimilar   | |
+|  +-----------------------------+--------------------------------+  |
+|                                |                                  |
+|  +-----------------------------+--------------------------------+  |
+|  |              HDC Strategy: dense-binary (DEFAULT)             | |
+|  |  DenseBinaryVector | Uint32Array | XOR bind | Majority bundle | |
 |  +---------------------------------------------------------------+  |
 +------------------------------------------------------------------+
 ```
+
+**Note:** The HDC layer uses a strategy pattern. The `dense-binary` strategy is the default. Alternative strategies can be selected via `SYS2_HDC_STRATEGY` environment variable.
 
 ---
 
@@ -52,6 +59,19 @@ This Functional Specification (FS) defines the detailed functional requirements 
 | **FS-05** | The system SHALL provide position vectors Pos1 through Pos20 for argument ordering | URS-12 | Unit Test |
 | **FS-06** | The system SHALL initialize vectors deterministically using ASCII stamping | URS-01 | Unit Test |
 | **FS-07** | The system SHALL support vector extension (smaller to larger geometry) via cloning | URS-07 | Unit Test |
+
+### 3.1.1 HDC Strategy Management
+
+| ID | Requirement | Traces To | Verification |
+|----|-------------|-----------|--------------|
+| **FS-91** | The system SHALL provide a facade module (`src/hdc/facade.mjs`) as single entry point for all HDC operations | URS-42 | Integration Test |
+| **FS-92** | The system SHALL support strategy selection via `SYS2_HDC_STRATEGY` environment variable | URS-44 | Unit Test |
+| **FS-93** | The system SHALL default to `dense-binary` strategy when no strategy is specified | URS-43 | Unit Test |
+| **FS-94** | The system SHALL provide strategy registration via `registerStrategy(id, strategy)` | URS-42 | Unit Test |
+| **FS-95** | The system SHALL provide strategy enumeration via `listStrategies()` | URS-42 | Unit Test |
+| **FS-96** | The system SHALL provide `validateStrategy(strategy, geometry)` for contract validation | URS-46 | Unit Test |
+| **FS-97** | The system SHALL provide `benchmarkStrategy(strategyId, geometry, options)` for performance testing | URS-45 | Unit Test |
+| **FS-98** | The system SHALL provide `compareStrategies(strategyIds, geometry, options)` for multi-strategy comparison | URS-45 | Unit Test |
 
 ### 3.2 DSL Parser
 
@@ -270,6 +290,7 @@ This Functional Specification (FS) defines the detailed functional requirements 
 | FS-73 to FS-78 | URS-23, URS-24, URS-39 | DS10 |
 | FS-79 to FS-85 | URS-40 | DS10 |
 | FS-86 to FS-90 | URS-16, URS-30 | DS08 |
+| FS-91 to FS-98 | URS-42, URS-43, URS-44, URS-45, URS-46 | DS09 |
 
 ---
 

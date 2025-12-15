@@ -2,9 +2,39 @@
 
 # Chapter 9A: Core HDC Implementation
 
-**Document Version:** 2.0  
-**Status:** Draft Specification  
-**Focus:** Theoretical Foundation, Module Architecture, Key Algorithms
+**Document Version:** 3.0
+**Status:** Draft Specification
+**Focus:** HDC Strategy Abstraction, Theoretical Foundation, Module Architecture
+
+---
+
+## 9A.0 HDC Strategy Architecture
+
+AGISystem2 uses a **strategy pattern** for HDC operations. This allows swapping the underlying vector representation without changing the reasoning layer.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 4: Application (DSL, Session API)                    │
+│  ─────────────────────────────────────────────────────────  │
+│  Layer 3: Reasoning (Query, Prove, Rules)                   │
+│  ─────────────────────────────────────────────────────────  │
+│  Layer 2: HDC Operations Interface (bind, bundle, sim)      │  ← CONTRACT
+│  ═══════════════════════════════════════════════════════════│
+│  Layer 1: HDC Implementation Strategy                       │  ← SWAPPABLE
+│           ├── dense-binary (Uint32Array, XOR, majority)     │  ← DEFAULT
+│           └── [future: sparse-polynomial, bigint, etc.]     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Strategy Selection
+
+The HDC strategy is selected via environment variable:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SYS2_HDC_STRATEGY` | `dense-binary` | Active HDC implementation |
+
+**Note:** This chapter describes the `dense-binary` strategy (the default and currently only implementation). Future strategies must satisfy the same HDC contract.
 
 ---
 
@@ -25,8 +55,13 @@
 │  └──────────────────────────┬─────────────────────────────────┘ │
 │                             │                                   │
 │  ┌──────────────────────────┴─────────────────────────────────┐ │
-│  │                    Core HDC Layer                           │ │
-│  │  Vector │ Operations │ Position │ AsciiStamp               │ │
+│  │                    HDC Facade (src/hdc/facade.mjs)          │ │
+│  │  bind, bundle, similarity, createFromName, topKSimilar     │ │
+│  └──────────────────────────┬─────────────────────────────────┘ │
+│                             │                                   │
+│  ┌──────────────────────────┴─────────────────────────────────┐ │
+│  │              HDC Strategy: dense-binary (DEFAULT)           │ │
+│  │  DenseBinaryVector │ XOR binding │ Majority bundle          │ │
 │  └─────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -35,39 +70,48 @@
 
 ```
 src/
-├── core/                    # ← THIS CHAPTER (9A)
-│   ├── vector.js            # Vector storage & bit manipulation
-│   ├── operations.js        # Bind, Bundle, Similarity
-│   ├── position.js          # Pos1..Pos20 for argument ordering
-│   └── constants.js         # GEOMETRY=32768, thresholds
+├── hdc/                     # ← HDC ABSTRACTION LAYER (NEW)
+│   ├── facade.mjs           # Single entry point for all HDC ops
+│   ├── contract.mjs         # Interface definitions (JSDoc)
+│   └── strategies/
+│       ├── index.mjs        # Strategy registry
+│       └── dense-binary.mjs # Default: Uint32Array + XOR
 │
-├── util/                    # ← THIS CHAPTER (9A)
-│   ├── ascii-stamp.js       # Deterministic initialization
-│   ├── prng.js              # Seeded randomness
-│   └── hash.js              # String → seed conversion
+├── core/                    # ← BACKWARD COMPATIBILITY (re-exports)
+│   ├── vector.mjs           # Re-exports Vector from hdc/facade
+│   ├── operations.mjs       # Re-exports operations from hdc/facade
+│   ├── position.mjs         # Pos1..Pos20 for argument ordering
+│   └── constants.mjs        # GEOMETRY=32768, thresholds
+│
+├── util/                    # ← UTILITIES
+│   ├── ascii-stamp.mjs      # Deterministic initialization
+│   ├── prng.mjs             # Seeded randomness
+│   └── hash.mjs             # String → seed conversion
 │
 ├── parser/                  # ← CHAPTER 9B
-│   ├── lexer.js             # Tokenization
-│   ├── parser.js            # AST construction
-│   └── ast.js               # Node types
+│   ├── lexer.mjs            # Tokenization
+│   ├── parser.mjs           # AST construction
+│   └── ast.mjs              # Node types
 │
 ├── runtime/                 # ← CHAPTER 9B
-│   ├── session.js           # Main API surface
-│   ├── executor.js          # Statement execution
-│   ├── scope.js             # Variable management
-│   └── theory/              # Theory loading & registry
+│   ├── session.mjs          # Main API surface
+│   ├── executor.mjs         # Statement execution
+│   ├── scope.mjs            # Variable management
+│   └── vocabulary.mjs       # Atom registry
 │
 ├── reasoning/               # ← CHAPTER 9B
-│   ├── query.js             # Hole-filling queries
-│   ├── prove.js             # Proof construction
-│   └── rules.js             # Rule firing
+│   ├── query.mjs            # Hole-filling queries
+│   └── prove.mjs            # Proof construction
 │
-├── bridge/                  # ← CHAPTER 10A
-│   └── evaluator.js         # JS ↔ HDC bridge
+├── decoding/                # ← TEXT GENERATION
+│   ├── structural-decoder.mjs
+│   ├── text-generator.mjs
+│   └── phrasing.mjs
 │
-└── codegen/                 # ← CHAPTER 10B
-    ├── js-generator.js      # HDC → JavaScript
-    └── dsl-generator.js     # HDC → Sys2DSL
+└── nlp/                     # ← NL→DSL TRANSFORMATION
+    ├── tokenizer.mjs
+    ├── patterns.mjs
+    └── transformer.mjs
 ```
 
 ---
@@ -428,30 +472,127 @@ This is why we use position vectors, not permutation.
 
 ---
 
-## 9A.9 Module Responsibilities Summary
+## 9A.9 HDC Contract (Strategy Requirements)
 
-| Module | Purpose | Key Functions |
-|--------|---------|---------------|
-| `vector.js` | Storage & serialization | new, clone, getBit, setBit, toBuffer |
-| `operations.js` | HDC operations | bind, bindAll, bundle, similarity, mostSimilar, topK |
-| `position.js` | Argument ordering | getPosition, withPosition, removePosition |
-| `constants.js` | Configuration | GEOMETRY, WORDS, thresholds |
-| `ascii-stamp.js` | Deterministic init | asciiStamp(name, theory, geo) |
-| `prng.js` | Seeded random | nextBits, nextInt |
-| `hash.js` | String→seed | hash(string) → number |
+All HDC strategies must satisfy these **mathematical properties**:
+
+| Property | Requirement | Verification |
+|----------|-------------|--------------|
+| `bind(a, a)` | Produces "zero" effect (self-inverse) | Unit test |
+| `bind(bind(a, b), b)` | ≈ a (reversibility) | Similarity > 0.95 |
+| `similarity(v, v)` | = 1.0 (reflexive) | Exact equality |
+| `similarity(a, b)` | = similarity(b, a) (symmetric) | Unit test |
+| `similarity(random, random)` | ≈ 0.5 ± 0.05 (quasi-orthogonal) | Statistical test |
+| `bundle([a,b,c]).similarity(a)` | > 0.5 for small n (retrievable) | Unit test |
+
+### Required Strategy Functions
+
+```javascript
+// Factory
+createZero(geometry)           // → zero vector
+createRandom(geometry, seed?)  // → random ~50% density vector
+createFromName(name, geometry) // → deterministic vector (CRITICAL: same input = same output)
+deserialize(obj)               // → vector from storage format
+
+// Core operations
+bind(a, b)                     // → associative, commutative, self-inverse
+bindAll(...vectors)            // → sequential bind
+bundle(vectors, tieBreaker?)   // → superposition (majority vote for binary)
+similarity(a, b)               // → [0, 1] range
+unbind(composite, component)   // → inverse of bind (= bind for XOR)
+
+// Utilities
+clone(v), equals(a, b), serialize(v)
+topKSimilar(query, vocabulary, k)
+distance(a, b), isOrthogonal(a, b)
+```
+
+### Strategy Validation
+
+Use `validateStrategy()` from `src/hdc/contract.mjs`:
+
+```javascript
+import { validateStrategy } from './src/hdc/contract.mjs';
+const result = validateStrategy(myStrategy, 2048);
+console.log(result.valid ? 'OK' : result.errors);
+```
 
 ---
 
-## 9A.10 Design Decisions Summary
+## 9A.10 Module Responsibilities Summary
+
+### HDC Layer (src/hdc/)
+
+| Module | Purpose | Key Functions |
+|--------|---------|---------------|
+| `facade.mjs` | Single entry point | bind, bundle, similarity, createFromName, initHDC |
+| `contract.mjs` | Interface definitions | HDC_CONTRACT, validateStrategy |
+| `strategies/index.mjs` | Strategy registry | getStrategy, registerStrategy, listStrategies |
+| `strategies/dense-binary.mjs` | Default strategy | DenseBinaryVector, bind, bundle, similarity |
+
+### Core Layer (src/core/) - Backward Compatibility
+
+| Module | Purpose | Key Functions |
+|--------|---------|---------------|
+| `vector.mjs` | Re-export | Vector (from hdc/facade) |
+| `operations.mjs` | Re-export | bind, bundle, similarity (from hdc/facade) |
+| `position.mjs` | Argument ordering | getPosition, withPosition, removePosition |
+| `constants.mjs` | Configuration | GEOMETRY, WORDS, thresholds |
+
+### Utilities (src/util/)
+
+| Module | Purpose | Key Functions |
+|--------|---------|---------------|
+| `ascii-stamp.mjs` | Deterministic init | asciiStamp(name, theory, geo) |
+| `prng.mjs` | Seeded random | nextBits, nextInt |
+| `hash.mjs` | String→seed | djb2(string) → number |
+
+---
+
+## 9A.11 Design Decisions Summary
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Bit storage | BigInt[512] | Native 64-bit ops in JS |
+| Architecture | Strategy pattern | Allows future HDC implementations |
+| Default strategy | dense-binary | Proven, fast, SIMD-friendly |
+| Bit storage (dense-binary) | Uint32Array | Native 32-bit ops in JS |
 | Argument order | Position vectors | Permutation breaks extension |
-| Initialization | ASCII stamp | Deterministic + debuggable |
+| Initialization | ASCII stamp + hash | Deterministic + debuggable |
 | Bundle limit | ~200 facts | Similarity degrades beyond |
 | Default geometry | 32,768 | Good capacity/memory tradeoff |
 | Position count | 20 | Sufficient for most relations |
+| Strategy selection | Env var | Simple, runtime-configurable |
+
+---
+
+## 9A.12 Benchmarking
+
+Benchmark infrastructure is built into the facade:
+
+```javascript
+import { benchmarkStrategy, printBenchmark } from './src/hdc/facade.mjs';
+
+const results = benchmarkStrategy('dense-binary', 8192, { iterations: 1000 });
+printBenchmark(results);
+
+// Output:
+// === HDC Strategy Benchmark ===
+// Strategy: dense-binary
+// Geometry: 8192
+// Operations:
+// ────────────────────────────────────────
+// bind           0.002 ms    650K ops/sec
+// similarity     0.004 ms    250K ops/sec
+// bundle         0.195 ms      5K ops/sec
+// ────────────────────────────────────────
+```
+
+Compare multiple strategies:
+
+```javascript
+import { compareStrategies } from './src/hdc/facade.mjs';
+const results = compareStrategies(['dense-binary', 'future-strategy'], 8192);
+```
 
 ---
 

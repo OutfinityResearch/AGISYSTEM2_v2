@@ -2,134 +2,176 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Spock AGISystem2 – Documentation</title>
+  <title>AGISystem2 – Documentation</title>
   <link rel="stylesheet" href="reference/style.css">
 </head>
 <body>
   <div class="page">
   <div class="nav-header">
-    <h1>Spock AGISystem2 – Holographic Computation Engine</h1>
+    <h1>AGISystem2 – Hyperdimensional Reasoning Engine</h1>
     <small>
       <a href="index.html">Home</a> ·
       <a href="architecture/index.html">Architecture</a> ·
       <a href="theory/index.html">Theory</a> ·
       <a href="syntax/index.html">Syntax</a> ·
       <a href="api/index.html">APIs</a> ·
-      <a href="wiki/index.html">Wiki</a> ·
       <a href="specs/matrix.html">Specs</a>
     </small>
-    <small>Holographic distributed computation for neuro-symbolic reasoning</small>
+    <small>Neuro-symbolic reasoning with hyperdimensional computing</small>
   </div>
 
   <div class="section-intro">
-    <p>Spock is a <strong>Holographic Computation Engine</strong> for neuro-symbolic reasoning. It represents concepts, facts, relations and theories as holographic distributed representations (hypervectors) and executes reasoning, planning and explanation through a formally defined DSL based on Subject–Verb–Object triplets.</p>
+    <p>AGISystem2 is a <strong>Hyperdimensional Reasoning Engine</strong> for neuro-symbolic AI. It represents concepts, facts, relations and rules as high-dimensional vectors and executes reasoning through a formally defined DSL with full explainability.</p>
   </div>
 
-  <h2>What Spock Is Good For</h2>
+  <h2>Key Features</h2>
   <ul>
-    <li><strong>Deterministic Reasoning:</strong> Unlike probabilistic LLMs, Spock produces reproducible, explainable results with provenance trails.</li>
-    <li><strong>Theory Management:</strong> Manage multiple competing theories, branch and merge them, and reason across different worldviews.</li>
-    <li><strong>Numeric Integration:</strong> Seamlessly combine geometric reasoning with physical quantities and units.</li>
-    <li><strong>Explainability:</strong> Every answer comes with a DSL trace that can be replayed and audited.</li>
+    <li><strong>Deterministic Reasoning:</strong> Reproducible, explainable results with proof traces.</li>
+    <li><strong>Multi-Strategy HDC:</strong> Pluggable vector representations (dense binary, sparse polynomial, etc.).</li>
+    <li><strong>Transitive Chains:</strong> Automatic inference across taxonomies and spatial relations.</li>
+    <li><strong>Backward Chaining:</strong> Rule-based reasoning with And/Or conditions.</li>
+    <li><strong>Natural Language Output:</strong> DSL results converted to human-readable text.</li>
   </ul>
 
   <h2>Core Concepts</h2>
   <table class="matrix-table">
     <tr>
       <td><strong>Hypervectors</strong></td>
-      <td>High-dimensional vectors (512+ dimensions) that represent concepts, facts, and states in a continuous geometric space.</td>
+      <td>High-dimensional binary vectors (default 32,768 bits) representing concepts in geometric space. Operations: bind (XOR), bundle (majority), similarity (Hamming).</td>
     </tr>
     <tr>
-      <td><strong>SpockDSL</strong></td>
-      <td>A minimal, uniform DSL where every statement has the form <code>@varName subject verb object</code>.</td>
+      <td><strong>DSL Syntax</strong></td>
+      <td>Statements have form <code>@dest operator arg1 arg2 ...</code> or <code>operator arg1 arg2</code> for anonymous facts.</td>
     </tr>
     <tr>
-      <td><strong>Theories</strong></td>
-      <td>Named collections of facts and verb definitions that can be persisted, versioned, and overlaid.</td>
+      <td><strong>HDC Strategies</strong></td>
+      <td>Pluggable implementations: <code>dense-binary</code> (default), with support for future strategies like sparse polynomial. Set via <code>SYS2_HDC_STRATEGY</code> env var.</td>
     </tr>
     <tr>
       <td><strong>Sessions</strong></td>
-      <td>Temporary working contexts that overlay theories and host local facts for reasoning.</td>
+      <td>Runtime contexts that load theories, accumulate facts in KB, and execute queries/proofs.</td>
     </tr>
     <tr>
-      <td><strong>Verbs</strong></td>
-      <td>Binary relations implemented as geometric transformations: kernel verbs (Add, Bind), logical verbs (Implies, And), and domain verbs.</td>
+      <td><strong>Theories</strong></td>
+      <td>Reusable .sys2 files with facts and rules. Core theories define taxonomy, logic, and modal operators.</td>
     </tr>
   </table>
+
+  <h2>HDC Strategy Architecture</h2>
+  <pre><code>┌─────────────────────────────────────────────────────────┐
+│  Layer 4: Application (DSL, Session API)                │
+│  ─────────────────────────────────────────────────────  │
+│  Layer 3: Reasoning (Query, Prove, Rules)               │
+│  ─────────────────────────────────────────────────────  │
+│  Layer 2: HDC Operations Interface (bind, bundle, sim)  │  ← CONTRACT
+│  ═══════════════════════════════════════════════════════│
+│  Layer 1: HDC Implementation Strategy                   │  ← SWAPPABLE
+│           ├── dense-binary (Uint32Array, XOR, majority) │
+│           └── [future: sparse-polynomial, bigint, etc.] │
+└─────────────────────────────────────────────────────────┘</code></pre>
 
   <h2>Documentation Sections</h2>
 
   <div class="section-grid">
     <div class="section-card">
       <h3><a href="architecture/index.html">Architecture</a></h3>
-      <p>Layered overview of the main modules: kernel, DSL engine, theory management, sessions, and APIs.</p>
+      <p>System layers: HDC core, runtime (Session, Executor), reasoning (Query, Prove), parser, and output generation.</p>
     </div>
 
     <div class="section-card">
       <h3><a href="theory/index.html">Foundational Theory</a></h3>
-      <p>Why Spock works: hyperdimensional computing, geometric truth, VSA operations, semantic navigation, and explainability.</p>
+      <p>Hyperdimensional computing principles: vector space algebra, bind/bundle operations, similarity metrics.</p>
     </div>
 
     <div class="section-card">
-      <h3><a href="syntax/index.html">SpockDSL Syntax</a></h3>
-      <p>Complete language reference: statements, macros, theories, verbs, sessions, and execution semantics.</p>
+      <h3><a href="syntax/index.html">DSL Syntax</a></h3>
+      <p>Language reference: statements, operators, macros, theories, and Core theory definitions.</p>
     </div>
 
     <div class="section-card">
-      <h3><a href="api/index.html">Public APIs</a></h3>
-      <p>API documentation for <code>createSpockEngine</code>, sessions, and high-level methods: learn, ask, prove, explain, plan, solve, summarise.</p>
-    </div>
-
-    <div class="section-card">
-      <h3><a href="wiki/index.html">Quick Wiki</a></h3>
-      <p>Compact glossary of terms and concepts with links to detailed documentation.</p>
+      <h3><a href="api/index.html">APIs</a></h3>
+      <p>Session API: learn(), query(), prove(), generateText(), elaborate(). HDC Facade: bind(), bundle(), similarity().</p>
     </div>
 
     <div class="section-card">
       <h3><a href="specs/matrix.html">Specifications</a></h3>
-      <p>Full traceability matrix: URS, FS, NFS, Design Specs, Test Specs, and Evaluation Suites.</p>
+      <p>Design specs (DS01-DS17), evaluation suites, and test coverage matrix.</p>
     </div>
 
     <div class="section-card">
       <h3><a href="guides/index.html">Guides</a></h3>
-      <p>Conceptual guides on geometric reasoning, theory layering, bias control, and explainability.</p>
+      <p>Conceptual guides: geometric reasoning, theory layering, <a href="guides/hdc-strategies.html">HDC strategies</a>, LLM integration.</p>
     </div>
   </div>
 
-  <h2>Quick Start Example</h2>
-  <pre><code>// Create engine
-const engine = createSpockEngine({ dimensions: 512 });
-const session = engine.createSession();
-const api = createSessionApi(session);
+  <h2>Quick Start</h2>
+  <pre><code>import { Session } from './src/runtime/session.mjs';
 
-// Learn some facts
-api.learn(`
-  @f1 Socrates Is Human
-  @f2 Humans Are Mortal
+// Create session (loads Core theories automatically)
+const session = new Session({ geometry: 32768 });
+
+// Learn facts
+session.learn(`
+  isA Dog Animal
+  isA Rex Dog
 `);
 
-// Ask a question
-const result = api.ask(`
-  @query Socrates Is Mortal
-  @eval query Evaluate Truth
-`);
+// Query
+const result = session.query('@q isA Rex ?what');
+console.log(result.bindings.get('what').answer); // "Dog"
 
-console.log(result.scores.truth); // ~1.0
-console.log(result.dslOutput);    // Replayable DSL trace
-</code></pre>
+// Prove with transitive reasoning
+const proof = session.prove('@goal isA Rex Animal');
+console.log(proof.valid);  // true
+console.log(proof.method); // "transitive_chain"
+
+// Generate natural language
+const text = session.generateText('isA', ['Rex', 'Animal']);
+console.log(text); // "Rex is an animal."</code></pre>
+
+  <h2>Environment Variables</h2>
+  <table class="matrix-table">
+    <tr>
+      <td><code>SYS2_HDC_STRATEGY</code></td>
+      <td>HDC implementation to use. Default: <code>dense-binary</code></td>
+    </tr>
+    <tr>
+      <td><code>SYS2_DEBUG</code></td>
+      <td>Enable debug logging. Set to <code>true</code> for verbose output.</td>
+    </tr>
+    <tr>
+      <td><code>SYS2_SKIP_CORE</code></td>
+      <td>Skip loading Core theories (testing only). Default: <code>false</code></td>
+    </tr>
+  </table>
+
+  <h2>Benchmarking HDC Strategies</h2>
+  <pre><code>import { benchmarkStrategy, printBenchmark } from './src/hdc/facade.mjs';
+
+const results = benchmarkStrategy('dense-binary', 8192, { iterations: 1000 });
+printBenchmark(results);
+
+// Output:
+// === HDC Strategy Benchmark ===
+// Strategy: dense-binary
+// Geometry: 8192
+// Operations:
+// ────────────────────────────────────────
+// bind           0.002 ms    650K ops/sec
+// similarity     0.004 ms    250K ops/sec
+// bundle         0.195 ms      5K ops/sec
+// ────────────────────────────────────────</code></pre>
 
   <h2>Specification Documents</h2>
   <ul>
-    <li><a href="specsLoader.html?spec=URS.md">URS – User Requirements Specification</a></li>
-    <li><a href="specsLoader.html?spec=FS.md">FS – Functional Specification</a></li>
-    <li><a href="specsLoader.html?spec=NFS.md">NFS – Non-Functional Specification</a></li>
-    <li><a href="specsLoader.html?spec=DS_map.md">DS – Design Specification Map</a></li>
-    <li><a href="specsLoader.html?spec=DS_tests_map.md">DS – Test Suite Map</a></li>
-    <li><a href="specsLoader.html?spec=DS_eval_map.md">DS – Evaluation Suite Map</a></li>
+    <li><a href="specsLoader.html?spec=DS01-Theoretical-Foundation.md">DS01 – Theoretical Foundation</a></li>
+    <li><a href="specsLoader.html?spec=DS03-Architecture.md">DS03 – Architecture</a></li>
+    <li><a href="specsLoader.html?spec=DS09-Core-HDC.md">DS09 – HDC Core Implementation</a></li>
+    <li><a href="specsLoader.html?spec=DS_map.md">DS – Full Specification Map</a></li>
   </ul>
 
   <div class="footer-nav">
-    <p>Spock GOS is designed for deterministic, explainable reasoning with full provenance tracking. All outputs can be represented as DSL scripts and replayed for verification.</p>
+    <p>AGISystem2 provides deterministic, explainable reasoning with full proof traces. Current eval score: <strong>97%</strong> (363/376 tests passing).</p>
   </div>
   </div>
 
@@ -145,8 +187,9 @@ console.log(result.dslOutput);    // Replayable DSL trace
       vertical-align: top;
     }
     .matrix-table td:first-child {
-      width: 150px;
+      width: 180px;
       background: #f5f5f5;
+      font-family: 'Consolas', 'Monaco', monospace;
     }
     .section-grid {
       display: grid;
@@ -175,9 +218,16 @@ console.log(result.dslOutput);    // Replayable DSL trace
       padding: 15px;
       border-radius: 5px;
       overflow-x: auto;
+      font-size: 13px;
     }
     code {
       font-family: 'Consolas', 'Monaco', monospace;
+    }
+    .section-intro {
+      background: #e3f2fd;
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin: 15px 0;
     }
   </style>
 </body>

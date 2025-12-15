@@ -1,9 +1,9 @@
 # AGISystem2 - Non-Functional Specification (NFS)
 
-**Document Version:** 1.0
+**Document Version:** 2.0
 **Status:** Draft
 **Classification:** GAMP Category 5 - Custom Application
-**Date:** 2024-12-12
+**Date:** 2024-12-15
 
 ---
 
@@ -47,6 +47,24 @@ This Non-Functional Specification (NFS) defines the quality attributes, constrai
 | **NFS-16** | Maximum theory nesting depth | 10 levels | Design limit | URS-07 |
 | **NFS-17** | Maximum macro nesting depth | 20 levels | Stack limit | URS-11 |
 | **NFS-18** | Maximum proof search depth | 10 levels | Configurable | URS-04 |
+
+### 2.4 HDC Strategy Benchmarking
+
+| ID | Requirement | Target | Measurement | Traces To |
+|----|-------------|--------|-------------|-----------|
+| **NFS-95** | Benchmark infrastructure SHALL measure all core HDC operations | Required | API coverage | URS-45 |
+| **NFS-96** | Benchmark SHALL report ops/second for each operation | Required | Output format | URS-45 |
+| **NFS-97** | Benchmark SHALL support configurable iteration count | Required | Parameter | URS-45 |
+| **NFS-98** | Strategy comparison SHALL report side-by-side metrics | Required | Output format | URS-45 |
+| **NFS-99** | Benchmark results SHALL include memory per vector calculation | Required | Output format | URS-45 |
+
+**Benchmark Operations:**
+- `createRandom` - Vector creation with random data
+- `createFromName` - Deterministic vector creation
+- `bind` - Association operation
+- `similarity` - Comparison operation
+- `bundle` - Superposition operation
+- `clone` - Deep copy operation
 
 ---
 
@@ -291,14 +309,17 @@ src/
 |----------|------------|-------|
 | Technology | Language | JavaScript/TypeScript |
 | Technology | Runtime | Node.js 18+ |
+| Technology | Module System | ES Modules (.mjs) |
 | License | Type | GNU AGPL v3 |
-| Architecture | Operations | Bind (XOR), Bundle (Majority) only |
+| Architecture | HDC Strategy | Pluggable (default: dense-binary) |
+| Architecture | Operations | Bind (XOR), Bundle (Majority) |
 | Architecture | Default Geometry | 32,768 bits |
 | Architecture | Position Vectors | 20 (Pos1-Pos20) |
 | Capacity | KB Optimal Limit | 200 facts |
 | Capacity | KB Hard Limit | ~500 facts |
 | Performance | Query Target | < 100ms |
-| Memory | Per Vector | 4 KB |
+| Memory | Per Vector (32K) | 4 KB |
+| Configuration | Strategy Env Var | `SYS2_HDC_STRATEGY` |
 
 ---
 
@@ -309,6 +330,7 @@ src/
 | Performance - Response Time | NFS-01 to NFS-08 | URS-21 |
 | Performance - Throughput | NFS-09 to NFS-11 | URS-21 |
 | Performance - Capacity | NFS-12 to NFS-18 | URS-04, URS-07, URS-11, URS-22 |
+| HDC Benchmarking | NFS-95 to NFS-99 | URS-45 |
 | Reliability - Determinism | NFS-19 to NFS-22 | URS-01 |
 | Reliability - Accuracy | NFS-23 to NFS-26 | URS-03, URS-05 |
 | Reliability - Availability | NFS-27 to NFS-29 | URS-23, URS-28 |

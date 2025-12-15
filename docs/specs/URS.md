@@ -1,15 +1,15 @@
 # AGISystem2 - User Requirements Specification (URS)
 
-**Document Version:** 1.0
+**Document Version:** 2.0
 **Status:** Draft
 **Classification:** GAMP Category 5 - Custom Application
-**Date:** 2024-12-12
+**Date:** 2024-12-15
 
 ---
 
 ## 1. Document Purpose
 
-This User Requirements Specification (URS) defines the high-level user needs and business requirements for AGISystem2 (Spock GOS - Holographic Computation Engine). Requirements are numbered using the format **URS-XX** for traceability.
+This User Requirements Specification (URS) defines the high-level user needs and business requirements for AGISystem2 - a Hyperdimensional Reasoning Engine. Requirements are numbered using the format **URS-XX** for traceability.
 
 ---
 
@@ -118,6 +118,16 @@ AGISystem2 is a neuro-symbolic reasoning system that provides deterministic, exp
 | **URS-39** | The system SHALL provide clear error messages with remediation suggestions | MUST | Developer experience |
 | **URS-40** | The system SHALL provide debugging tools for inspecting vectors and KB state | SHOULD | Development support |
 | **URS-41** | The system SHALL support a `SYS2_DEBUG` environment variable to enable detailed trace logging | SHOULD | Facilitates debugging complex scenarios |
+
+### 4.10 HDC Strategy Requirements
+
+| ID | Requirement | Priority | Rationale |
+|----|-------------|----------|-----------|
+| **URS-42** | The system SHALL support pluggable HDC implementations via a strategy pattern | SHOULD | Allows experimentation with alternative vector representations |
+| **URS-43** | The system SHALL provide a default HDC strategy (dense-binary) that works out of the box | MUST | Users should not need to configure HDC to get started |
+| **URS-44** | The system SHALL allow HDC strategy selection via environment variable (`SYS2_HDC_STRATEGY`) | SHOULD | Runtime configuration without code changes |
+| **URS-45** | The system SHALL provide benchmarking tools to compare HDC strategy performance | SHOULD | Support for performance optimization |
+| **URS-46** | The system SHALL validate custom HDC strategies against a defined contract | SHOULD | Ensure correctness of new implementations |
 
 ---
 

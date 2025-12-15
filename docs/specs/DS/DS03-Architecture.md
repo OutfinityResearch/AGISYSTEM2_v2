@@ -53,6 +53,7 @@ AGISystem2Engine
 | `prove` | DSL with holes | Proof | Answer + derivation |
 | `summarize` | Vector | string | Concise decode |
 | `elaborate` | Vector | string | Detailed decode |
+| `generateText` | operator, args | string | DSL → natural language |
 | **`dump`** | — | SessionState | Full session state |
 | **`inspect`** | name | VectorInfo | Detailed vector info |
 | **`listTheories`** | — | TheoryInfo[] | Loaded theories |
@@ -61,6 +62,55 @@ AGISystem2Engine
 | **`listFacts`** | — | FactInfo[] | All facts in KB |
 | **`similarity`** | a, b | number | Compare two vectors |
 | **`decode`** | vector | DecodedStructure | Extract structure |
+
+---
+
+## 4.2.1 HDC Layer Architecture
+
+The system uses a **strategy pattern** for HDC operations, allowing pluggable implementations:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 4: Application (DSL, Session API)                    │
+│  ─────────────────────────────────────────────────────────  │
+│  Layer 3: Reasoning (Query, Prove, Rules)                   │
+│  ─────────────────────────────────────────────────────────  │
+│  Layer 2: HDC Facade (bind, bundle, sim, createFromName)    │  ← CONTRACT
+│  ═══════════════════════════════════════════════════════════│
+│  Layer 1: HDC Strategy (Implementation)                     │  ← SWAPPABLE
+│           ├── dense-binary (DEFAULT)                        │
+│           └── [future strategies]                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### HDC Module Structure
+
+```
+src/hdc/
+├── facade.mjs           # Single entry point for all HDC operations
+├── contract.mjs         # Interface definitions (JSDoc), validation
+└── strategies/
+    ├── index.mjs        # Strategy registry
+    └── dense-binary.mjs # Default: Uint32Array + XOR
+```
+
+### Key HDC Operations (via Facade)
+
+| Operation | Description | Used By |
+|-----------|-------------|---------|
+| `bind(a, b)` | XOR-based association | Executor, Query |
+| `bundle(vectors)` | Majority-vote superposition | KB updates |
+| `similarity(a, b)` | Hamming-based similarity [0,1] | Query, Prove |
+| `createFromName(name, geo)` | Deterministic vector creation | ASCII stamp |
+| `topKSimilar(query, vocab, k)` | Find best matches | Query engine |
+
+### Environment Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SYS2_HDC_STRATEGY` | `dense-binary` | Active HDC implementation |
+| `SYS2_DEBUG` | `false` | Enable debug logging |
+| `SYS2_SKIP_CORE` | `false` | Skip Core theories (testing) |
 
 ---
 

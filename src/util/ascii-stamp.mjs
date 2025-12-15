@@ -2,45 +2,36 @@
  * AGISystem2 - ASCII Stamp Generator
  * @module util/ascii-stamp
  *
- * Generates deterministic hypervectors from ASCII strings.
- * Each unique string produces a unique ~50% dense vector.
+ * BACKWARD COMPATIBILITY LAYER
+ * Uses hdc/facade for deterministic vector generation.
+ *
+ * New code should use createFromName directly:
+ *   import { createFromName } from '../hdc/facade.mjs';
  */
 
-import { Vector } from '../core/vector.mjs';
-import { PRNG } from './prng.mjs';
-import { djb2 } from './hash.mjs';
+import { createFromName } from '../hdc/facade.mjs';
 
 /**
  * Generate a deterministic vector from a string identifier
  * @param {string} identifier - String to encode
  * @param {number} geometry - Vector dimension
- * @returns {Vector} Deterministic random vector
+ * @returns {Object} Deterministic vector
  */
 export function asciiStamp(identifier, geometry) {
-  // Create seeded PRNG from identifier hash
-  const seed = djb2(identifier);
-  const prng = new PRNG(seed);
-
-  // Generate random vector
-  const v = new Vector(geometry);
-  for (let i = 0; i < v.words; i++) {
-    v.data[i] = prng.randomUint32();
-  }
-
-  return v;
+  return createFromName(identifier, geometry);
 }
 
 /**
- * Generate multiple orthogonal vectors from base identifier
+ * Generate multiple vectors from base identifier
  * @param {string} baseId - Base identifier
  * @param {number} count - Number of vectors
  * @param {number} geometry - Vector dimension
- * @returns {Vector[]} Array of vectors
+ * @returns {Object[]} Array of vectors
  */
 export function asciiStampBatch(baseId, count, geometry) {
   const vectors = [];
   for (let i = 0; i < count; i++) {
-    vectors.push(asciiStamp(`${baseId}:${i}`, geometry));
+    vectors.push(createFromName(`${baseId}:${i}`, geometry));
   }
   return vectors;
 }
