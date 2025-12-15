@@ -7,7 +7,8 @@
  */
 
 import { Vector } from '../core/vector.mjs';
-import { bind, bundle, similarity, topKSimilar, bindAll, getDefaultGeometry } from '../core/operations.mjs';
+import { bind, unbind, bundle, similarity, topKSimilar, bindAll, getDefaultGeometry } from '../core/operations.mjs';
+import { getPositionVector } from '../core/position.mjs';
 import { withPosition, removePosition } from '../core/position.mjs';
 import { parse } from '../parser/parser.mjs';
 import { Scope } from './scope.mjs';
@@ -44,6 +45,7 @@ export class Session {
     this.theories = new Map();
     this.operators = new Map();
     this.warnings = [];
+    this.referenceTexts = new Map(); // Maps reference names to fact strings
 
     // Reasoning statistics
     this.reasoningStats = {
@@ -88,9 +90,19 @@ export class Session {
       // Track rules (Implies statements)
       this.trackRules(ast);
 
+      // Count actual facts: for Load statements, use factsLoaded; otherwise count results
+      let factCount = 0;
+      for (const r of result.results) {
+        if (r && typeof r.factsLoaded === 'number') {
+          factCount += r.factsLoaded;
+        } else {
+          factCount += 1;
+        }
+      }
+
       return {
         success: result.success,
-        facts: result.results.length,
+        facts: factCount,
         errors: result.errors.map(e => e.message),
         warnings: this.warnings.slice()
       };
@@ -197,7 +209,7 @@ export class Session {
   }
 
   /**
-   * Recursively extract compound condition (And/Or)
+   * Recursively extract compound condition (And/Or/Not)
    * Preserves AST for variable unification
    */
   extractCompoundCondition(expr, stmtMap) {
@@ -218,6 +230,23 @@ export class Session {
             };
           });
           return { type: op, parts };
+        }
+        // Handle Not operator - negated condition
+        if (op === 'Not' && stmt.args?.length === 1) {
+          const inner = this.extractCompoundCondition(stmt.args[0], stmtMap);
+          if (inner) {
+            return { type: 'Not', inner };
+          }
+          // Not wrapping a simple statement
+          const resolvedAST = this.resolveReferenceToAST(stmt.args[0], stmtMap);
+          return {
+            type: 'Not',
+            inner: {
+              type: 'leaf',
+              vector: this.executor.resolveExpression(stmt.args[0]),
+              ast: resolvedAST
+            }
+          };
         }
       }
     }
@@ -319,6 +348,139 @@ export class Session {
       }
 
       return result;
+    } catch (e) {
+      return { success: false, reason: e.message };
+    }
+  }
+
+  /**
+   * Query using HDC Master Equation (true holographic computing)
+   *
+   * Uses the formula: Answer = KB ⊕ Query⁻¹
+   *
+   * For a query like "isA Rex ?what":
+   * 1. Build partial vector (everything except holes)
+   * 2. Bundle all KB facts into single KB vector
+   * 3. Apply Master Equation: answer = unbind(KB, partial)
+   * 4. Extract candidate at hole position
+   * 5. Find most similar in vocabulary
+   *
+   * @param {string} dsl - Query DSL with holes (?x, ?y, etc.)
+   * @returns {Object} Query result with HDC-derived bindings
+   */
+  queryHDC(dsl) {
+    dbg('QUERY_HDC', 'Starting:', dsl?.substring(0, 60));
+
+    try {
+      const ast = parse(dsl);
+      if (ast.statements.length === 0) {
+        return { success: false, reason: 'Empty query' };
+      }
+
+      const stmt = ast.statements[0];
+
+      // Extract holes and their positions
+      const holes = [];
+      const args = stmt.args || [];
+      for (let i = 0; i < args.length; i++) {
+        if (args[i].type === 'Hole') {
+          holes.push({ name: args[i].name, position: i + 1 });
+        }
+      }
+
+      if (holes.length === 0) {
+        // No holes - treat as existence check
+        return { success: false, reason: 'No holes in query (use query() for existence checks)' };
+      }
+
+      // Build partial vector - bind all non-hole parts
+      const operatorName = stmt.operator?.name || stmt.operator?.value;
+      if (!operatorName) {
+        return { success: false, reason: 'Invalid query - no operator' };
+      }
+
+      const opVec = this.vocabulary.getOrCreate(operatorName);
+      let partial = opVec;
+
+      for (let i = 0; i < args.length; i++) {
+        if (args[i].type !== 'Hole') {
+          const argName = args[i].name || args[i].value;
+          if (argName) {
+            const argVec = this.vocabulary.getOrCreate(argName);
+            const posVec = getPositionVector(i + 1, this.geometry);
+            partial = bind(partial, bind(argVec, posVec));
+          }
+        }
+      }
+
+      // Bundle all KB facts into single KB vector
+      if (this.kbFacts.length === 0) {
+        return { success: false, reason: 'Knowledge base is empty' };
+      }
+
+      const factVectors = this.kbFacts.map(f => f.vector).filter(v => v);
+      if (factVectors.length === 0) {
+        return { success: false, reason: 'No valid fact vectors in KB' };
+      }
+
+      const kbBundle = bundle(factVectors);
+
+      // Master Equation: Answer = KB ⊕ Query⁻¹
+      // For XOR-based HDC: unbind(KB, partial) = bind(KB, partial)
+      const answer = unbind(kbBundle, partial);
+
+      // Extract bindings for each hole
+      const bindings = new Map();
+      const results = [];
+
+      for (const hole of holes) {
+        const posVec = getPositionVector(hole.position, this.geometry);
+        const candidate = unbind(answer, posVec);
+
+        // Find top matches in vocabulary
+        const matches = topKSimilar(candidate, this.vocabulary.atoms, 5);
+
+        if (matches.length > 0 && matches[0].similarity > 0.3) {
+          bindings.set(hole.name, {
+            answer: matches[0].name,
+            confidence: matches[0].similarity,
+            alternatives: matches.slice(1, 3).map(m => ({
+              value: m.name,
+              confidence: m.similarity
+            }))
+          });
+          results.push({
+            hole: hole.name,
+            position: hole.position,
+            answer: matches[0].name,
+            confidence: matches[0].similarity
+          });
+        } else {
+          bindings.set(hole.name, { answer: null, confidence: 0 });
+          results.push({
+            hole: hole.name,
+            position: hole.position,
+            answer: null,
+            confidence: 0
+          });
+        }
+      }
+
+      // Track statistics
+      this.reasoningStats.queries++;
+      this.trackMethod('hdc_master_equation');
+      this.trackOperation('hdc_unbind');
+
+      const success = results.some(r => r.answer !== null);
+      return {
+        success,
+        method: 'hdc_master_equation',
+        bindings,
+        results,
+        kbSize: this.kbFacts.length,
+        holes: holes.length
+      };
+
     } catch (e) {
       return { success: false, reason: e.message };
     }

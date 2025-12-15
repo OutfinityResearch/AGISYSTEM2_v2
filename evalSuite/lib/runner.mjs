@@ -396,9 +396,9 @@ function runDslToNl(testCase, reasoningPhase, session, timeoutMs) {
            const op = parts[0];
            dbg('DSL->NL', 'Query op:', op, 'parts:', parts);
 
-           // Filter results: only use high-quality matches (similarity >= 0.8)
+           // Filter results: use matches with reasonable quality (score >= 0.5)
            const allResults = result.allResults || [{bindings: result.bindings, score: 1}];
-           const goodResults = allResults.filter(r => (r.score || 1) >= 0.8);
+           const goodResults = allResults.filter(r => (r.score || 1) >= 0.5);
            const resultsToProcess = goodResults.length > 0 ? goodResults : [allResults[0]];
 
            for(const r of resultsToProcess) {
@@ -530,8 +530,12 @@ export async function runSuite(suite) {
       passed,
       failed: total - passed,
       brokenParser, // Useful metric: logic works, language fails
-      reasoningStats
-    }
+      reasoningStats,
+      results // Include results for detailed reporting
+    },
+    cases: suite.cases, // Include cases for detailed reporting
+    name: suite.name,
+    suiteName: suite.suiteName
   };
 }
 

@@ -195,6 +195,11 @@ export class Executor {
     // If there's a destination, store it in scope
     if (stmt.destination) {
       this.session.scope.set(stmt.destination, vector);
+      // Also save the fact text for later proof chain generation
+      const factText = this.statementToFactString(stmt);
+      if (factText && operatorName !== 'Implies') {
+        this.session.referenceTexts.set(stmt.destination, factText);
+      }
     }
 
     // Add to knowledge base only if:
@@ -406,6 +411,17 @@ export class Executor {
       operator: operatorName,
       args: args
     };
+  }
+
+  /**
+   * Convert statement to fact string "operator arg1 arg2"
+   * @param {Statement} stmt - Statement node
+   * @returns {string} Fact string
+   */
+  statementToFactString(stmt) {
+    const operatorName = this.extractName(stmt.operator);
+    const args = stmt.args.map(arg => this.extractName(arg)).filter(Boolean);
+    return `${operatorName} ${args.join(' ')}`;
   }
 
   /**

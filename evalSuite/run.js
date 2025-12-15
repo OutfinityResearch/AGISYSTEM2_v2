@@ -91,7 +91,7 @@ async function main() {
 
         // Report results
         reportCaseResults(suite.cases, results);
-        reportSuiteSummary(summary);
+        reportSuiteSummary(summary, suite.cases);
 
         // Show failure details if verbose
         if (verbose) {
@@ -104,7 +104,8 @@ async function main() {
           name: suite.name,
           suiteName,
           results,
-          summary
+          summary,
+          cases: suite.cases
         });
 
       } catch (err) {

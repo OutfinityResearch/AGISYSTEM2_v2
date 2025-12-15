@@ -136,8 +136,9 @@ export function reportCaseResults(cases, results) {
 /**
  * Report suite summary
  * @param {Object} summary - Summary stats
+ * @param {Array} cases - Test cases for additional statistics
  */
-export function reportSuiteSummary(summary) {
+export function reportSuiteSummary(summary, cases = []) {
   const { total, passed, failed, partialPass } = summary;
   const pct = total > 0 ? Math.round((passed / total) * 100) : 0;
 
@@ -202,9 +203,9 @@ function formatNum(n) {
  */
 export function reportGlobalSummary(suiteResults) {
   console.log();
-  console.log(`${colors.bold}${colors.magenta}${'='.repeat(110)}${colors.reset}`);
+  console.log(`${colors.bold}${colors.magenta}${'='.repeat(120)}${colors.reset}`);
   console.log(`${colors.bold}${colors.magenta}EVALUATION COMPLETE${colors.reset}`);
-  console.log(`${colors.magenta}${'='.repeat(110)}${colors.reset}`);
+  console.log(`${colors.magenta}${'='.repeat(120)}${colors.reset}`);
   console.log();
 
   let totalCases = 0;
@@ -225,31 +226,36 @@ export function reportGlobalSummary(suiteResults) {
     operations: {}
   };
 
-  // Table header with legend
-  console.log(`${colors.bold}${colors.cyan}Suite Results with Reasoning Statistics:${colors.reset}`);
+  // Table header with clear separation and legend
+  console.log(`${colors.bold}${colors.cyan}Suite Results:${colors.reset}`);
   console.log();
-  console.log(`${colors.dim}Column Definitions:${colors.reset}`);
-  console.log(`${colors.dim}  Pass   = % of tests passed          Tests  = passed/total count${colors.reset}`);
-  console.log(`${colors.dim}  KBScan = KB fact lookups            SimChk = vector similarity comparisons${colors.reset}`);
-  console.log(`${colors.dim}  Trans  = transitive chain steps     Rules  = backward chaining rule applications${colors.reset}`);
-  console.log(`${colors.dim}  MaxD   = deepest proof chain        AvgL   = average proof steps (proofs only, not learn)${colors.reset}`);
-  console.log(`${colors.dim}  Query  = query operations count     Proof  = prove operations count${colors.reset}`);
+  console.log(`${colors.dim}┌─ EXPECTED: counted from test case definitions (action field in cases.mjs)${colors.reset}`);
+  console.log(`${colors.dim}│  L = learn cases    Q = query cases    P = prove cases${colors.reset}`);
+  console.log(`${colors.dim}│${colors.reset}`);
+  console.log(`${colors.dim}└─ RUNTIME: TOTAL counts during reasoning (K = thousands, e.g., 2.0K = 2000)${colors.reset}`);
+  console.log(`${colors.dim}   KBSc = knowledge base scans             Sim = vector similarity checks${colors.reset}`);
+  console.log(`${colors.dim}   Tr   = transitive chain steps           Rl  = rule inference attempts${colors.reset}`);
+  console.log(`${colors.dim}   D    = max proof depth                  Avg = avg steps/proof    Steps = total proof steps${colors.reset}`);
   console.log();
-  console.log(`${colors.dim}${'─'.repeat(110)}${colors.reset}`);
+  console.log(`${colors.dim}${'─'.repeat(120)}${colors.reset}`);
   console.log(`${colors.bold}` +
-    `${'Suite'.padEnd(32)}` +
+    `${'Suite'.padEnd(25)}` +
     `${'Pass'.padStart(6)}` +
-    `${'Tests'.padStart(7)}` +
-    `${'KBScan'.padStart(8)}` +
-    `${'SimChk'.padStart(8)}` +
-    `${'Trans'.padStart(7)}` +
-    `${'Rules'.padStart(7)}` +
-    `${'MaxD'.padStart(6)}` +
-    `${'AvgL'.padStart(6)}` +
-    `${'Query'.padStart(7)}` +
-    `${'Proof'.padStart(7)}` +
+    `${'Tests'.padStart(8)}` +
+    ` ${colors.gray}│${colors.reset}` +
+    `${'L'.padStart(4)}` +
+    `${'Q'.padStart(4)}` +
+    `${'P'.padStart(4)}` +
+    ` ${colors.gray}│${colors.reset}` +
+    `${'KBSc'.padStart(7)}` +
+    `${'Sim'.padStart(7)}` +
+    `${'Tr'.padStart(5)}` +
+    `${'Rl'.padStart(5)}` +
+    `${'D'.padStart(4)}` +
+    `${'Avg'.padStart(5)}` +
+    `${'Steps'.padStart(6)}` +
     `${colors.reset}`);
-  console.log(`${colors.dim}${'─'.repeat(110)}${colors.reset}`);
+  console.log(`${colors.dim}${'─'.repeat(120)}${colors.reset}`);
 
   for (const suite of suiteResults) {
     totalCases += suite.summary.total;
@@ -283,25 +289,41 @@ export function reportGlobalSummary(suiteResults) {
 
     const suiteNum = extractSuiteNumber(suite.suiteName);
     const numDisplay = suiteNum ? `#${suiteNum} ` : '';
-    const shortName = suite.name.length > 24 ? suite.name.substring(0, 22) + '..' : suite.name;
+    const maxNameLen = 20;
+    const shortName = suite.name.length > maxNameLen ? suite.name.substring(0, maxNameLen - 2) + '..' : suite.name;
     const displayName = `${numDisplay}${shortName}`;
 
+    // Calculate action type counts for this suite
+    const suiteActionCounts = { learn: 0, query: 0, prove: 0 };
+
+    if (suite.cases) {
+      for (const testCase of suite.cases) {
+        if (testCase.action) {
+          suiteActionCounts[testCase.action] = (suiteActionCounts[testCase.action] || 0) + 1;
+        }
+      }
+    }
+
     console.log(
-      `${displayName.padEnd(32)}` +
-      `${statusColor}${(pct + '%').padStart(5)}${colors.reset} ` +
-      `${colors.dim}${String(suite.summary.passed + '/' + suite.summary.total).padStart(6)}${colors.reset}` +
-      `${formatNum(stats.kbScans || 0).padStart(8)}` +
-      `${formatNum(stats.similarityChecks || 0).padStart(8)}` +
-      `${formatNum(stats.transitiveSteps || 0).padStart(7)}` +
-      `${formatNum(stats.ruleAttempts || 0).padStart(7)}` +
-      `${String(stats.maxProofDepth || 0).padStart(6)}` +
-      `${String(stats.avgProofLength || 0).padStart(6)}` +
-      `${String(stats.queries || 0).padStart(7)}` +
-      `${String(stats.proofs || 0).padStart(7)}`
+      `${displayName.padEnd(25)}` +
+      `${statusColor}${(pct + '%').padStart(6)}${colors.reset}` +
+      `${colors.dim}${String(suite.summary.passed + '/' + suite.summary.total).padStart(8)}${colors.reset}` +
+      ` ${colors.gray}│${colors.reset}` +
+      `${String(suiteActionCounts.learn || 0).padStart(4)}` +
+      `${String(suiteActionCounts.query || 0).padStart(4)}` +
+      `${String(suiteActionCounts.prove || 0).padStart(4)}` +
+      ` ${colors.gray}│${colors.reset}` +
+      `${formatNum(stats.kbScans || 0).padStart(7)}` +
+      `${formatNum(stats.similarityChecks || 0).padStart(7)}` +
+      `${String(stats.transitiveSteps || 0).padStart(5)}` +
+      `${String(stats.ruleAttempts || 0).padStart(5)}` +
+      `${String(stats.maxProofDepth || 0).padStart(4)}` +
+      `${String(stats.avgProofLength || 0).padStart(5)}` +
+      `${String(stats.totalProofSteps || 0).padStart(6)}`
     );
   }
 
-  console.log(`${colors.dim}${'─'.repeat(110)}${colors.reset}`);
+  console.log(`${colors.dim}${'─'.repeat(120)}${colors.reset}`);
 
   // Totals row
   const overallPct = totalCases > 0 ? Math.floor((totalPassed / totalCases) * 100) : 0;
@@ -310,26 +332,44 @@ export function reportGlobalSummary(suiteResults) {
     ? (aggregatedStats.totalProofSteps / aggregatedStats.proofs).toFixed(1)
     : '0';
 
+  // Calculate global action type counts
+  const globalActionCounts = { learn: 0, query: 0, prove: 0 };
+
+  for (const suite of suiteResults) {
+    if (suite.cases) {
+      for (const testCase of suite.cases) {
+        if (testCase.action) {
+          globalActionCounts[testCase.action] = (globalActionCounts[testCase.action] || 0) + 1;
+        }
+      }
+    }
+  }
+
   console.log(`${colors.bold}` +
-    `${'TOTAL'.padEnd(32)}` +
-    `${overallColor}${(overallPct + '%').padStart(5)}${colors.reset} ` +
-    `${colors.bold}${String(totalPassed + '/' + totalCases).padStart(6)}${colors.reset}` +
-    `${colors.cyan}${formatNum(aggregatedStats.kbScans).padStart(8)}${colors.reset}` +
-    `${colors.cyan}${formatNum(aggregatedStats.similarityChecks).padStart(8)}${colors.reset}` +
-    `${colors.cyan}${formatNum(aggregatedStats.transitiveSteps).padStart(7)}${colors.reset}` +
-    `${colors.cyan}${formatNum(aggregatedStats.ruleAttempts).padStart(7)}${colors.reset}` +
-    `${colors.cyan}${String(aggregatedStats.maxProofDepth).padStart(6)}${colors.reset}` +
-    `${colors.cyan}${avgProofLen.padStart(6)}${colors.reset}` +
-    `${colors.cyan}${String(aggregatedStats.queries).padStart(7)}${colors.reset}` +
-    `${colors.cyan}${String(aggregatedStats.proofs).padStart(7)}${colors.reset}`
+    `${'TOTAL'.padEnd(25)}` +
+    `${overallColor}${(overallPct + '%').padStart(6)}${colors.reset}` +
+    `${colors.bold}${String(totalPassed + '/' + totalCases).padStart(8)}${colors.reset}` +
+    ` ${colors.gray}│${colors.reset}` +
+    `${colors.cyan}${String(globalActionCounts.learn).padStart(4)}${colors.reset}` +
+    `${colors.cyan}${String(globalActionCounts.query).padStart(4)}${colors.reset}` +
+    `${colors.cyan}${String(globalActionCounts.prove).padStart(4)}${colors.reset}` +
+    ` ${colors.gray}│${colors.reset}` +
+    `${colors.cyan}${formatNum(aggregatedStats.kbScans).padStart(7)}${colors.reset}` +
+    `${colors.cyan}${formatNum(aggregatedStats.similarityChecks).padStart(7)}${colors.reset}` +
+    `${colors.cyan}${String(aggregatedStats.transitiveSteps).padStart(5)}${colors.reset}` +
+    `${colors.cyan}${String(aggregatedStats.ruleAttempts).padStart(5)}${colors.reset}` +
+    `${colors.cyan}${String(aggregatedStats.maxProofDepth).padStart(4)}${colors.reset}` +
+    `${colors.cyan}${avgProofLen.padStart(5)}${colors.reset}` +
+    `${colors.cyan}${String(aggregatedStats.totalProofSteps).padStart(6)}${colors.reset}`
   );
-  console.log(`${colors.dim}${'─'.repeat(110)}${colors.reset}`);
+  console.log(`${colors.dim}${'─'.repeat(120)}${colors.reset}`);
   console.log();
 
   // Score
   console.log(`${colors.bold}Score: ${overallColor}${overallPct}%${colors.reset}  ` +
     `${colors.dim}(${totalPassed} passed, ${totalCases - totalPassed} failed)${colors.reset}`);
   console.log();
+
 }
 
 /**

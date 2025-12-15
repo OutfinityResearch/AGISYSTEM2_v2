@@ -111,7 +111,16 @@ export class TextGenerator {
       enables: (a) => a.length >= 2 ? `${a[0]} enables ${a[1]}.` : `enables(${a.join(', ')})`,
       prevents: (a) => a.length >= 2 ? `${a[0]} prevents ${a[1]}.` : `prevents(${a.join(', ')})`,
       indirectCause: (a) => a.length >= 2 ? `${a[0]} indirectly causes ${a[1]}.` : `indirectCause(${a.join(', ')})`,
+      indirectlyCauses: (a) => a.length >= 2 ? `${a[0]} indirectly causes ${a[1]}.` : `indirectlyCauses(${a.join(', ')})`,
       wouldPrevent: (a) => a.length >= 2 ? `Preventing ${a[0]} would prevent ${a[1]}.` : `wouldPrevent(${a.join(', ')})`,
+
+      // Compound property operators
+      isGuilty: (a) => a.length >= 1 ? `${a[0]} is guilty.` : `isGuilty()`,
+      isSuspect: (a) => a.length >= 1 ? `${a[0]} is suspect.` : `isSuspect()`,
+      canPay: (a) => a.length >= 1 ? `${a[0]} can pay.` : `canPay()`,
+      canPurchase: (a) => a.length >= 1 ? `${a[0]} can purchase.` : `canPurchase()`,
+      isProtected: (a) => a.length >= 1 ? `${a[0]} is protected.` : `isProtected()`,
+      canVote: (a) => a.length >= 1 ? `${a[0]} can vote.` : `canVote()`,
 
       // Eating
       eats: (a) => a.length >= 2 ? `${a[0]} eats ${a[1].toLowerCase()}.` : `eats(${a.join(', ')})`,
